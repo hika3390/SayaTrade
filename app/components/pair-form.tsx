@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
@@ -48,6 +48,18 @@ export function PairForm({
   const [sellShares, setSellShares] = useState(initialData?.sellShares || 0);
   const [buyPrice, setBuyPrice] = useState(initialData?.buyPrice || 0);
   const [sellPrice, setSellPrice] = useState(initialData?.sellPrice || 0);
+  
+  // initialDataが変更されたときに状態を更新
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+      setLink(initialData.link || "");
+      setBuyShares(initialData.buyShares);
+      setSellShares(initialData.sellShares);
+      setBuyPrice(initialData.buyPrice);
+      setSellPrice(initialData.sellPrice);
+    }
+  }, [initialData]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

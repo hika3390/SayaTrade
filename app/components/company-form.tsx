@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Label } from "@/app/components/ui/label";
@@ -31,6 +31,13 @@ export function CompanyForm({
   title,
 }: CompanyFormProps) {
   const [name, setName] = useState(initialData?.name || "");
+  
+  // initialDataが変更されたときに状態を更新
+  useEffect(() => {
+    if (initialData) {
+      setName(initialData.name);
+    }
+  }, [initialData]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
