@@ -13,7 +13,7 @@ export async function GET() {
   } catch (error) {
     console.error('企業一覧の取得に失敗しました:', error);
     return NextResponse.json(
-      { error: '企業一覧の取得に失敗しました' + error },
+      { error: '企業一覧の取得に失敗しました' },
       { status: 500 }
     );
   }
