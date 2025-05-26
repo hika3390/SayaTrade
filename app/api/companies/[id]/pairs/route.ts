@@ -100,6 +100,8 @@ export async function POST(
         sellShares,
         buyPrice,
         sellPrice,
+        buyStockCode: data.buyStockCode || null,
+        sellStockCode: data.sellStockCode || null,
         companyId: parseInt(id),
       },
     });

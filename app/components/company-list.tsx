@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
 import { CompanyForm } from "@/app/components/company-form";
 import { PairForm } from "@/app/components/pair-form";
@@ -9,6 +9,7 @@ interface Company {
   id: number;
   name: string;
   pairs: Pair[];
+  totalProfitLoss?: number;
 }
 
 interface Pair {
@@ -19,7 +20,12 @@ interface Pair {
   sellShares: number;
   buyPrice: number;
   sellPrice: number;
+  buyStockCode?: string;
+  sellStockCode?: string;
   companyId: number;
+  currentBuyPrice?: number;
+  currentSellPrice?: number;
+  profitLoss?: number;
 }
 
 interface CompanyListProps {
@@ -35,6 +41,76 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
   const [isEditPairOpen, setIsEditPairOpen] = useState(false);
   const [selectedPair, setSelectedPair] = useState<Pair | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [profitLossData, setProfitLossData] = useState<{
+    companies: {
+      id: number;
+      name: string;
+      pairs: Pair[];
+      totalProfitLoss?: number;
+    }[];
+  } | null>(null);
+
+  // コンポーネントマウント時に損益計算を実行
+  useEffect(() => {
+    fetchProfitLossData();
+  }, []);
+
+  // 損益計算APIを呼び出す関数
+  const fetchProfitLossData = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/calculate-profit-loss');
+      
+      if (!response.ok) {
+        throw new Error('損益計算に失敗しました');
+      }
+      
+      const data = await response.json();
+      setProfitLossData(data);
+      
+      // 企業データを更新
+      if (data.companies && data.companies.length > 0) {
+        // 既存の企業データと損益計算結果をマージ
+        const updatedCompanies = companies.map(company => {
+          const profitLossCompany = data.companies.find((c: { id: number }) => c.id === company.id);
+          if (profitLossCompany) {
+            return {
+              ...company,
+              totalProfitLoss: profitLossCompany.totalProfitLoss,
+              pairs: company.pairs.map(pair => {
+                const profitLossPair = profitLossCompany.pairs.find((p: { id: number }) => p.id === pair.id);
+                if (profitLossPair) {
+                  return {
+                    ...pair,
+                    currentBuyPrice: profitLossPair.currentBuyPrice,
+                    currentSellPrice: profitLossPair.currentSellPrice,
+                    profitLoss: profitLossPair.profitLoss
+                  };
+                }
+                return pair;
+              })
+            };
+          }
+          return company;
+        });
+        
+        setCompanies(updatedCompanies);
+        
+        // 選択中の企業がある場合、その情報も更新
+        if (selectedCompany) {
+          const updatedSelectedCompany = updatedCompanies.find((c: Company) => c.id === selectedCompany.id);
+          if (updatedSelectedCompany) {
+            setSelectedCompany(updatedSelectedCompany);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('損益計算の取得に失敗しました:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // 企業のペア情報を取得
   const fetchCompanyPairs = async (companyId: number) => {
@@ -47,21 +123,20 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
       
       const pairs = await response.json();
       
-      // 企業のペア情報を更新
-      setCompanies(
-        companies.map((company) =>
+      // 企業のペア情報を更新（関数型更新を使用）
+      setCompanies(prevCompanies =>
+        prevCompanies.map((company) =>
           company.id === companyId
             ? { ...company, pairs }
             : company
         )
       );
       
-      // 選択中の企業のペア情報も更新
+      // 選択中の企業のペア情報も更新（関数型更新を使用）
       if (selectedCompany && selectedCompany.id === companyId) {
-        setSelectedCompany({
-          ...selectedCompany,
-          pairs,
-        });
+        setSelectedCompany(prevSelectedCompany => 
+          prevSelectedCompany ? { ...prevSelectedCompany, pairs } : null
+        );
       }
     } catch (error) {
       console.error("ペア情報の取得に失敗しました:", error);
@@ -84,7 +159,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
       }
 
       const newCompany = await response.json();
-      setCompanies([...companies, { ...newCompany, pairs: [] }]);
+      setCompanies(prevCompanies => [...prevCompanies, { ...newCompany, pairs: [] }]);
     } catch (error) {
       console.error("企業の追加に失敗しました:", error);
     }
@@ -108,8 +183,8 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
       }
 
       const updatedCompany = await response.json();
-      setCompanies(
-        companies.map((company) =>
+      setCompanies(prevCompanies =>
+        prevCompanies.map((company) =>
           company.id === companyToEdit.id
             ? { ...updatedCompany, pairs: company.pairs }
             : company
@@ -135,7 +210,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
         throw new Error("企業の削除に失敗しました");
       }
 
-      setCompanies(companies.filter((company) => company.id !== id));
+      setCompanies(prevCompanies => prevCompanies.filter((company) => company.id !== id));
       if (selectedCompany?.id === id) {
         setSelectedCompany(null);
       }
@@ -152,6 +227,8 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
     sellShares: number;
     buyPrice: number;
     sellPrice: number;
+    buyStockCode?: string;
+    sellStockCode?: string;
   }) => {
     if (!selectedCompany) return;
 
@@ -183,6 +260,8 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
     sellShares: number;
     buyPrice: number;
     sellPrice: number;
+    buyStockCode?: string;
+    sellStockCode?: string;
   }) => {
     if (!selectedPair || !selectedCompany) return;
 
@@ -235,6 +314,8 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
     setSelectedCompany(company);
     // 最新のペア情報を取得
     fetchCompanyPairs(company.id);
+    // 損益計算データを更新
+    fetchProfitLossData();
   };
 
   // 企業一覧に戻るハンドラ
@@ -244,17 +325,13 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
 
   return (
     <div className="container mx-auto py-8">
-      {/* ナビゲーションバー */}
+      {/* ローカルヘッダー */}
       <div className="bg-gray-100 p-4 mb-6 rounded-lg">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold">サヤ取り分配くん</h1>
-            {selectedCompany && (
-              <>
-                <span className="text-gray-500">/</span>
-                <span className="font-semibold">{selectedCompany.name}</span>
-              </>
-            )}
+            <h1 className="text-xl font-semibold">
+              {selectedCompany ? `企業詳細: ${selectedCompany.name}` : '企業一覧'}
+            </h1>
           </div>
           {selectedCompany ? (
             <div className="flex gap-2">
@@ -264,7 +341,16 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
               </Button>
             </div>
           ) : (
-            <Button onClick={() => setIsAddCompanyOpen(true)}>企業を追加</Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setIsAddCompanyOpen(true)}>企業を追加</Button>
+              <Button 
+                variant="outline"
+                onClick={fetchProfitLossData}
+                disabled={isLoading}
+              >
+                {isLoading ? "計算中..." : "全体の損益計算"}
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -288,6 +374,11 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
                   <p className="text-sm text-gray-500">
                     登録ペア数: {company.pairs.length}
                   </p>
+                  {company.totalProfitLoss !== undefined && (
+                    <p className={`text-sm font-medium ${company.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      損益合計: {company.totalProfitLoss.toLocaleString()} 円
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -333,6 +424,11 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
                     <th className="border p-2 text-right">売り株数</th>
                     <th className="border p-2 text-right">買い単価</th>
                     <th className="border p-2 text-right">売り単価</th>
+                    <th className="border p-2 text-center">買い証券コード</th>
+                    <th className="border p-2 text-center">売り証券コード</th>
+                    <th className="border p-2 text-right">現在買値</th>
+                    <th className="border p-2 text-right">現在売値</th>
+                    <th className="border p-2 text-right">損益</th>
                     <th className="border p-2 text-center">操作</th>
                   </tr>
                 </thead>
@@ -358,6 +454,13 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
                       <td className="border p-2 text-right">{pair.sellShares}</td>
                       <td className="border p-2 text-right">{pair.buyPrice}</td>
                       <td className="border p-2 text-right">{pair.sellPrice}</td>
+                      <td className="border p-2 text-center">{pair.buyStockCode || "-"}</td>
+                      <td className="border p-2 text-center">{pair.sellStockCode || "-"}</td>
+                      <td className="border p-2 text-right">{pair.currentBuyPrice?.toLocaleString() || "-"}</td>
+                      <td className="border p-2 text-right">{pair.currentSellPrice?.toLocaleString() || "-"}</td>
+                      <td className={`border p-2 text-right ${pair.profitLoss !== undefined ? (pair.profitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
+                        {pair.profitLoss !== undefined ? `${pair.profitLoss.toLocaleString()} 円` : "-"}
+                      </td>
                       <td className="border p-2">
                         <div className="flex justify-center gap-2">
                           <Button
@@ -426,6 +529,19 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
           initialData={selectedPair}
           title="ペア情報を編集"
         />
+      )}
+
+      {/* 損益計算ボタン */}
+      {selectedCompany && (
+        <div className="mt-4 flex justify-end">
+          <Button 
+            onClick={fetchProfitLossData}
+            disabled={isLoading}
+            className="ml-auto"
+          >
+            {isLoading ? "計算中..." : "損益を再計算"}
+          </Button>
+        </div>
       )}
     </div>
   );

@@ -99,6 +99,8 @@ export async function PUT(
         sellShares,
         buyPrice,
         sellPrice,
+        buyStockCode: data.buyStockCode || null,
+        sellStockCode: data.sellStockCode || null,
       },
     });
     

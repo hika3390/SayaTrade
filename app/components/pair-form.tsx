@@ -22,6 +22,8 @@ interface PairFormProps {
     sellShares: number;
     buyPrice: number;
     sellPrice: number;
+    buyStockCode?: string;
+    sellStockCode?: string;
   }) => void;
   initialData?: {
     id: number;
@@ -31,6 +33,8 @@ interface PairFormProps {
     sellShares: number;
     buyPrice: number;
     sellPrice: number;
+    buyStockCode?: string;
+    sellStockCode?: string;
   };
   title: string;
 }
@@ -48,6 +52,8 @@ export function PairForm({
   const [sellShares, setSellShares] = useState(initialData?.sellShares || 0);
   const [buyPrice, setBuyPrice] = useState(initialData?.buyPrice || 0);
   const [sellPrice, setSellPrice] = useState(initialData?.sellPrice || 0);
+  const [buyStockCode, setBuyStockCode] = useState(initialData?.buyStockCode || "");
+  const [sellStockCode, setSellStockCode] = useState(initialData?.sellStockCode || "");
   
   // initialDataが変更されたときに状態を更新
   useEffect(() => {
@@ -58,6 +64,8 @@ export function PairForm({
       setSellShares(initialData.sellShares);
       setBuyPrice(initialData.buyPrice);
       setSellPrice(initialData.sellPrice);
+      setBuyStockCode(initialData.buyStockCode || "");
+      setSellStockCode(initialData.sellStockCode || "");
     }
   }, [initialData]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,6 +82,8 @@ export function PairForm({
         sellShares: Number(sellShares),
         buyPrice: Number(buyPrice),
         sellPrice: Number(sellPrice),
+        buyStockCode: buyStockCode || undefined,
+        sellStockCode: sellStockCode || undefined,
       });
       onClose();
     } catch (error) {
@@ -167,6 +177,30 @@ export function PairForm({
                 onChange={(e) => setSellPrice(Number(e.target.value))}
                 className="col-span-3"
                 required
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="buyStockCode" className="text-right">
+                買い証券コード
+              </Label>
+              <Input
+                id="buyStockCode"
+                value={buyStockCode}
+                onChange={(e) => setBuyStockCode(e.target.value)}
+                className="col-span-3"
+                placeholder="例: 1234"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="sellStockCode" className="text-right">
+                売り証券コード
+              </Label>
+              <Input
+                id="sellStockCode"
+                value={sellStockCode}
+                onChange={(e) => setSellStockCode(e.target.value)}
+                className="col-span-3"
+                placeholder="例: 5678"
               />
             </div>
           </div>

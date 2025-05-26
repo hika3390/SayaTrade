@@ -19,15 +19,17 @@ model Company {
 }
 
 model Pair {
-  id        Int     @id @default(autoincrement())
-  name      String
-  link      String?
-  buyShares Int
-  sellShares Int
-  buyPrice  Float
-  sellPrice Float
-  companyId Int
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id           Int     @id @default(autoincrement())
+  name         String
+  link         String?
+  buyShares    Int
+  sellShares   Int
+  buyPrice     Float
+  sellPrice    Float
+  buyStockCode String?
+  sellStockCode String?
+  companyId    Int
+  company      Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@map("pairs")
 }
