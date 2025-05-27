@@ -139,17 +139,22 @@ export async function GET() {
     const duplicatePairGroups: DuplicatePairGroup[] = [];
     const uniquePairs: PairWithPrices[] = [];
     
-    // 各グループについて処理
+// 各グループについて処理
     for (const key in pairGroups) {
       const group = pairGroups[key];
       
       if (group.length > 1) {
         // 重複するペアグループ
-        // 各ペアの現在の株価を取得して損益を計算
         let totalProfitLoss = 0;
         
         for (const pair of group) {
-          if (pair.buyStockCode && pair.sellStockCode) {
+          // データベースに保存されている損益情報がある場合はそれを使用
+          if (pair.currentBuyPrice !== null && pair.currentSellPrice !== null && pair.profitLoss !== null && pair.profitLoss !== undefined) {
+            // グループの合計損益に加算
+            totalProfitLoss += pair.profitLoss;
+          } 
+          // 損益情報がない場合は計算して一時的に設定（データベースには保存しない）
+          else if (pair.buyStockCode && pair.sellStockCode) {
             // 現在の株価を取得
             const currentBuyPrice = await fetchStockPrice(pair.buyStockCode);
             const currentSellPrice = await fetchStockPrice(pair.sellStockCode);
@@ -191,7 +196,12 @@ export async function GET() {
         // 単一のペア
         const pair = group[0];
         
-        if (pair.buyStockCode && pair.sellStockCode) {
+        // データベースに保存されている損益情報がある場合はそれを使用
+        if (pair.currentBuyPrice !== null && pair.currentSellPrice !== null && pair.profitLoss !== null && pair.profitLoss !== undefined) {
+          uniquePairs.push(pair);
+        }
+        // 損益情報がない場合は計算して一時的に設定（データベースには保存しない）
+        else if (pair.buyStockCode && pair.sellStockCode) {
           // 現在の株価を取得
           const currentBuyPrice = await fetchStockPrice(pair.buyStockCode);
           const currentSellPrice = await fetchStockPrice(pair.sellStockCode);

@@ -61,6 +61,7 @@ function CompanyListWrapper() {
         const formattedCompanies = companiesData.map((company: any) => ({
           id: company.id,
           name: company.name,
+          totalProfitLoss: company.totalProfitLoss, // 企業全体の損益を追加
           pairs: company.pairs ? company.pairs.map((pair: any) => ({
             id: pair.id,
             name: pair.name,
@@ -71,7 +72,10 @@ function CompanyListWrapper() {
             sellPrice: pair.sellPrice,
             buyStockCode: pair.buyStockCode || undefined, // 証券コードを追加
             sellStockCode: pair.sellStockCode || undefined, // 証券コードを追加
-            companyId: pair.companyId
+            companyId: pair.companyId,
+            currentBuyPrice: pair.currentBuyPrice, // 現在の買い価格を追加
+            currentSellPrice: pair.currentSellPrice, // 現在の売り価格を追加
+            profitLoss: pair.profitLoss // 損益情報を追加
           })) : []
         }));
         

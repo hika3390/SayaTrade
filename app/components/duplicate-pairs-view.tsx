@@ -42,7 +42,13 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
   const [duplicatePairGroups, setDuplicatePairGroups] = useState<DuplicatePairGroup[]>([]);
   const [uniquePairs, setUniquePairs] = useState<Pair[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [calculationResult, setCalculationResult] = useState<{
+    totalProcessed: number;
+    successCount: number;
+    errorCount: number;
+  } | null>(null);
 
   // コンポーネントマウント時にデータを取得
   useEffect(() => {
@@ -53,6 +59,7 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
   const fetchDuplicatePairs = async () => {
     setIsLoading(true);
     setError(null);
+    setCalculationResult(null);
     
     try {
       const response = await fetch('/api/duplicate-pairs');
@@ -69,6 +76,38 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
       setError('重複ペアの取得に失敗しました。再度お試しください。');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // 全ペアの損益を再計算してデータベースに保存
+  const recalculateAndSaveProfitLoss = async () => {
+    setIsCalculating(true);
+    setError(null);
+    setCalculationResult(null);
+    
+    try {
+      const response = await fetch('/api/calculate-profit-loss', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error('損益の計算と保存に失敗しました');
+      }
+      
+      const result = await response.json();
+      setCalculationResult({
+        totalProcessed: result.totalProcessed,
+        successCount: result.successCount,
+        errorCount: result.errorCount
+      });
+      
+      // 計算後にデータを再取得
+      await fetchDuplicatePairs();
+    } catch (error) {
+      console.error('損益の計算と保存に失敗しました:', error);
+      setError('損益の計算と保存に失敗しました。再度お試しください。');
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -94,12 +133,20 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
   const totalProfitLoss = calculateTotalProfitLoss();
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-4">
       {/* ヘッダー */}
       <div className="bg-gray-100 p-4 mb-6 rounded-lg">
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <h1 className="text-2xl font-bold">重複ペア一覧</h1>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={recalculateAndSaveProfitLoss}
+              disabled={isLoading || isCalculating}
+            >
+              {isLoading ? "読み込み中..." : "損益データを更新"}
+            </Button>
           </div>
         </div>
       </div>
@@ -242,15 +289,27 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
         )}
       </div>
 
-      {/* 再読み込みボタン */}
-      <div className="mt-8 flex justify-end">
-        <Button 
-          onClick={fetchDuplicatePairs}
-          disabled={isLoading}
-        >
-          {isLoading ? "読み込み中..." : "データを更新"}
-        </Button>
-      </div>
+      {/* 計算結果の表示 */}
+      {calculationResult && (
+        <div className="mt-8 bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <h3 className="text-lg font-semibold mb-2">損益計算結果</h3>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white p-3 rounded shadow">
+              <p className="text-sm text-gray-500">処理したペア数</p>
+              <p className="text-xl font-bold">{calculationResult.totalProcessed}</p>
+            </div>
+            <div className="bg-white p-3 rounded shadow">
+              <p className="text-sm text-gray-500">成功</p>
+              <p className="text-xl font-bold text-green-600">{calculationResult.successCount}</p>
+            </div>
+            <div className="bg-white p-3 rounded shadow">
+              <p className="text-sm text-gray-500">エラー</p>
+              <p className="text-xl font-bold text-red-600">{calculationResult.errorCount}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

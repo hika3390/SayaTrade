@@ -9,7 +9,27 @@ export async function GET() {
         pairs: true,
       },
     });
-    return NextResponse.json(companies);
+    
+    // 各企業の合計損益を計算
+    const companiesWithProfitLoss = companies.map(company => {
+      let totalProfitLoss = 0;
+      
+      // 各ペアの損益を合計
+      company.pairs.forEach(pair => {
+        if (pair.profitLoss !== null && pair.profitLoss !== undefined) {
+          totalProfitLoss += pair.profitLoss;
+        }
+      });
+      
+      return {
+        ...company,
+        totalProfitLoss: company.pairs.some(pair => pair.profitLoss !== null && pair.profitLoss !== undefined) 
+          ? totalProfitLoss 
+          : undefined
+      };
+    });
+    
+    return NextResponse.json(companiesWithProfitLoss);
   } catch (error) {
     console.error('企業一覧の取得に失敗しました:', error);
     return NextResponse.json(

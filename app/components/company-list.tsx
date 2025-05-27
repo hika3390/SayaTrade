@@ -42,19 +42,6 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   const [isEditPairOpen, setIsEditPairOpen] = useState(false);
   const [selectedPair, setSelectedPair] = useState<Pair | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [profitLossData, setProfitLossData] = useState<{
-    companies: {
-      id: number;
-      name: string;
-      pairs: Pair[];
-      totalProfitLoss?: number;
-    }[];
-  } | null>(null);
-
-  // コンポーネントマウント時に損益計算を実行
-  useEffect(() => {
-    fetchProfitLossData();
-  }, []);
 
   // 損益計算APIを呼び出す関数
   const fetchProfitLossData = async () => {
@@ -67,7 +54,6 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
       }
       
       const data = await response.json();
-      setProfitLossData(data);
       
       // 企業データを更新
       if (data.companies && data.companies.length > 0) {
@@ -314,8 +300,6 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
     setSelectedCompany(company);
     // 最新のペア情報を取得
     fetchCompanyPairs(company.id);
-    // 損益計算データを更新
-    fetchProfitLossData();
   };
 
   // 企業一覧に戻るハンドラ
@@ -324,7 +308,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   };
 
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-4">
       {/* ローカルヘッダー */}
       <div className="bg-gray-100 p-4 mb-6 rounded-lg">
         <div className="flex justify-between items-center">
@@ -459,7 +443,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
                       <td className="border p-2 text-right">{pair.currentBuyPrice?.toLocaleString() || "-"}</td>
                       <td className="border p-2 text-right">{pair.currentSellPrice?.toLocaleString() || "-"}</td>
                       <td className={`border p-2 text-right ${pair.profitLoss !== undefined ? (pair.profitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
-                        {pair.profitLoss !== undefined ? `${pair.profitLoss.toLocaleString()} 円` : "-"}
+                        {pair.profitLoss !== undefined && pair.profitLoss !== null ? `${pair.profitLoss?.toLocaleString()} 円` : "-"}
                       </td>
                       <td className="border p-2">
                         <div className="flex justify-center gap-2">

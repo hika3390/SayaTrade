@@ -89,7 +89,31 @@ function calculateProfitLoss(
   }
 }
 
-// 全ペアの損益を計算するAPI
+// 損益情報をデータベースに保存する関数
+async function saveProfitLossToDatabase(
+  pairId: number,
+  currentBuyPrice: number,
+  currentSellPrice: number,
+  profitLoss: number
+): Promise<void> {
+  try {
+    await prisma.pair.update({
+      where: { id: pairId },
+      data: {
+        currentBuyPrice,
+        currentSellPrice,
+        profitLoss,
+        updatedAt: new Date(),
+      },
+    });
+    console.log(`ペアID ${pairId} の損益情報を保存しました`);
+  } catch (error) {
+    console.error(`ペアID ${pairId} の損益情報の保存に失敗しました:`, error);
+    throw error;
+  }
+}
+
+// 全ペアの損益を計算するAPI（データベースには保存しない）
 export async function GET() {
   try {
     // 全ての企業とそのペア情報を取得
@@ -136,6 +160,14 @@ export async function GET() {
               pair.sellPrice,
               currentSellPrice
             );
+
+            // データベースに保存
+            await saveProfitLossToDatabase(
+              pair.id,
+              currentBuyPrice,
+              currentSellPrice,
+              profitLoss
+            );
             
             // 結果をペア情報に追加
             const pairWithPrices: PairWithPrices = {
@@ -162,6 +194,96 @@ export async function GET() {
     console.error('損益計算に失敗しました:', error);
     return NextResponse.json(
       { error: '損益計算に失敗しました' },
+      { status: 500 }
+    );
+  }
+}
+
+// 全ペアの損益を計算してデータベースに保存するAPI
+export async function POST() {
+  try {
+    // 買いと売りの両方に証券コードが入力されているペアを取得
+    const pairs = await prisma.pair.findMany({
+      where: {
+        buyStockCode: { not: null },
+        sellStockCode: { not: null },
+      },
+    });
+    
+    // 処理結果を格納する配列
+    const results = [];
+    let successCount = 0;
+    let errorCount = 0;
+    
+    // 各ペアについて処理
+    for (const pair of pairs) {
+      try {
+        if (pair.buyStockCode && pair.sellStockCode) {
+          // 現在の株価を取得
+          const currentBuyPrice = await fetchStockPrice(pair.buyStockCode);
+          const currentSellPrice = await fetchStockPrice(pair.sellStockCode);
+          
+          // 両方の株価が取得できた場合のみ損益を計算してデータベースに保存
+          if (currentBuyPrice !== null && currentSellPrice !== null) {
+            const profitLoss = calculateProfitLoss(
+              pair.buyShares,
+              pair.buyPrice,
+              currentBuyPrice,
+              pair.sellShares,
+              pair.sellPrice,
+              currentSellPrice
+            );
+            
+            // データベースに保存
+            await saveProfitLossToDatabase(
+              pair.id,
+              currentBuyPrice,
+              currentSellPrice,
+              profitLoss
+            );
+            
+            results.push({
+              pairId: pair.id,
+              success: true,
+              currentBuyPrice,
+              currentSellPrice,
+              profitLoss
+            });
+            
+            successCount++;
+          } else {
+            results.push({
+              pairId: pair.id,
+              success: false,
+              error: '株価の取得に失敗しました'
+            });
+            
+            errorCount++;
+          }
+        }
+      } catch (error) {
+        console.error(`ペアID ${pair.id} の処理中にエラーが発生しました:`, error);
+        
+        results.push({
+          pairId: pair.id,
+          success: false,
+          error: '処理中にエラーが発生しました'
+        });
+        
+        errorCount++;
+      }
+    }
+    
+    return NextResponse.json({
+      totalProcessed: pairs.length,
+      successCount,
+      errorCount,
+      results
+    });
+  } catch (error) {
+    console.error('損益計算と保存に失敗しました:', error);
+    return NextResponse.json(
+      { error: '損益計算と保存に失敗しました' },
       { status: 500 }
     );
   }
