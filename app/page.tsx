@@ -14,7 +14,7 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* グローバルナビゲーションバー */}
       <nav className="bg-gray-800 text-white p-4">
-        <div className="container mx-auto flex justify-between items-center">
+        <div className="px-4 mx-auto flex justify-between items-center">
           <div className="text-xl font-bold">サヤ取り分配くん</div>
           <div className="flex gap-4">
             <button 
@@ -34,7 +34,7 @@ export default function Home() {
       </nav>
 
       {/* メインコンテンツ */}
-      <div className="container mx-auto py-4">
+      <div className="mx-auto p-4">
         {currentView === 'companies' ? (
           <CompanyListWrapper />
         ) : (
@@ -75,7 +75,9 @@ function CompanyListWrapper() {
             companyId: pair.companyId,
             currentBuyPrice: pair.currentBuyPrice, // 現在の買い価格を追加
             currentSellPrice: pair.currentSellPrice, // 現在の売り価格を追加
-            profitLoss: pair.profitLoss // 損益情報を追加
+            profitLoss: pair.profitLoss, // 損益情報を追加
+            buyProfitLoss: pair.buyProfitLoss, // 買いの損益情報を追加
+            sellProfitLoss: pair.sellProfitLoss // 売りの損益情報を追加
           })) : []
         }));
         

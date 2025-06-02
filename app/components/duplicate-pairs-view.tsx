@@ -133,7 +133,7 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
   const totalProfitLoss = calculateTotalProfitLoss();
 
   return (
-    <div className="container mx-auto py-4">
+    <div className="mx-auto py-4">
       {/* ヘッダー */}
       <div className="bg-gray-100 p-4 mb-6 rounded-lg">
         <div className="flex justify-between items-center">

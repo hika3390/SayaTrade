@@ -148,103 +148,113 @@ async function saveProfitLossToDatabase(
   }
 }
 
-// 全ペアの損益を計算するAPI
-export async function GET() {
+// 特定企業の損益を計算するAPI
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    // 全ての企業とそのペア情報を取得
-    const companies = await prisma.company.findMany({
+    const { id } = await params;
+    if (isNaN(parseInt(id))) {
+      return NextResponse.json(
+        { error: '無効なIDです' },
+        { status: 400 }
+      );
+    }
+
+    const companyId = parseInt(id);
+    if (isNaN(companyId)) {
+      return NextResponse.json(
+        { error: '無効な企業IDです' },
+        { status: 400 }
+      );
+    }
+
+    // 指定された企業とそのペア情報を取得
+    const company = await prisma.company.findUnique({
+      where: { id: companyId },
       include: {
         pairs: true,
       },
     });
+
+    if (!company) {
+      return NextResponse.json(
+        { error: '企業が見つかりません' },
+        { status: 404 }
+      );
+    }
     
-    // 結果を格納する配列
-    const result: { 
-      companies: { 
-        id: number; 
-        name: string; 
-        pairs: PairWithPrices[]; 
-        totalProfitLoss?: number;
-      }[] 
-    } = { companies: [] };
+    // 結果を格納するオブジェクト
+    const result = {
+      id: company.id,
+      name: company.name,
+      pairs: [] as PairWithPrices[],
+      totalProfitLoss: 0
+    };
     
-    // 各企業のペアについて処理
-    for (const company of companies) {
-      const processedCompany = {
-        id: company.id,
-        name: company.name,
-        pairs: [] as PairWithPrices[],
-        totalProfitLoss: 0
-      };
-      
-      // 各ペアについて処理
-      for (const pair of company.pairs) {
-        // 買いまたは売りの証券コードが入力されているペアを処理
-        if (pair.buyStockCode || pair.sellStockCode) {
-          let currentBuyPrice: number | null = null;
-          let currentSellPrice: number | null = null;
-          let buyProfitLoss: number | null = null;
-          let sellProfitLoss: number | null = null;
-          
-          // 買い証券コードがある場合、買い株価を取得
-          if (pair.buyStockCode) {
-            currentBuyPrice = await fetchStockPrice(pair.buyStockCode);
-            if (currentBuyPrice !== null) {
-              buyProfitLoss = calculateBuyProfitLoss(
-                pair.buyShares,
-                pair.buyPrice,
-                currentBuyPrice
-              );
-            }
-          }
-          
-          // 売り証券コードがある場合、売り株価を取得
-          if (pair.sellStockCode) {
-            currentSellPrice = await fetchStockPrice(pair.sellStockCode);
-            if (currentSellPrice !== null) {
-              sellProfitLoss = calculateSellProfitLoss(
-                pair.sellShares,
-                pair.sellPrice,
-                currentSellPrice
-              );
-            }
-          }
-          
-          // 合計損益を計算
-          const profitLoss = calculateTotalProfitLoss(buyProfitLoss, sellProfitLoss);
-          
-          // 何らかの損益が計算できた場合のみデータベースに保存
-          if (buyProfitLoss !== null || sellProfitLoss !== null) {
-            await saveProfitLossToDatabase(
-              pair.id,
-              currentBuyPrice,
-              currentSellPrice,
-              profitLoss,
-              buyProfitLoss,
-              sellProfitLoss
+    // 各ペアについて処理
+    for (const pair of company.pairs) {
+      // 買いまたは売りの証券コードが入力されているペアを処理
+      if (pair.buyStockCode || pair.sellStockCode) {
+        let currentBuyPrice: number | null = null;
+        let currentSellPrice: number | null = null;
+        let buyProfitLoss: number | null = null;
+        let sellProfitLoss: number | null = null;
+        
+        // 買い証券コードがある場合、買い株価を取得
+        if (pair.buyStockCode) {
+          currentBuyPrice = await fetchStockPrice(pair.buyStockCode);
+          if (currentBuyPrice !== null) {
+            buyProfitLoss = calculateBuyProfitLoss(
+              pair.buyShares,
+              pair.buyPrice,
+              currentBuyPrice
             );
-            
-            // 結果をペア情報に追加
-            const pairWithPrices: PairWithPrices = {
-              ...pair,
-              currentBuyPrice: currentBuyPrice || undefined,
-              currentSellPrice: currentSellPrice || undefined,
-              profitLoss: profitLoss || undefined,
-              buyProfitLoss: buyProfitLoss || undefined,
-              sellProfitLoss: sellProfitLoss || undefined
-            };
-            
-            processedCompany.pairs.push(pairWithPrices);
-            if (profitLoss !== null) {
-              processedCompany.totalProfitLoss += profitLoss;
-            }
           }
         }
-      }
-      
-      // ペアが1つ以上ある場合のみ結果に追加
-      if (processedCompany.pairs.length > 0) {
-        result.companies.push(processedCompany);
+        
+        // 売り証券コードがある場合、売り株価を取得
+        if (pair.sellStockCode) {
+          currentSellPrice = await fetchStockPrice(pair.sellStockCode);
+          if (currentSellPrice !== null) {
+            sellProfitLoss = calculateSellProfitLoss(
+              pair.sellShares,
+              pair.sellPrice,
+              currentSellPrice
+            );
+          }
+        }
+        
+        // 合計損益を計算
+        const profitLoss = calculateTotalProfitLoss(buyProfitLoss, sellProfitLoss);
+        
+        // 何らかの損益が計算できた場合のみデータベースに保存
+        if (buyProfitLoss !== null || sellProfitLoss !== null) {
+          await saveProfitLossToDatabase(
+            pair.id,
+            currentBuyPrice,
+            currentSellPrice,
+            profitLoss,
+            buyProfitLoss,
+            sellProfitLoss
+          );
+          
+          // 結果をペア情報に追加
+          const pairWithPrices: PairWithPrices = {
+            ...pair,
+            currentBuyPrice: currentBuyPrice || undefined,
+            currentSellPrice: currentSellPrice || undefined,
+            profitLoss: profitLoss || undefined,
+            buyProfitLoss: buyProfitLoss || undefined,
+            sellProfitLoss: sellProfitLoss || undefined
+          };
+          
+          result.pairs.push(pairWithPrices);
+          if (profitLoss !== null) {
+            result.totalProfitLoss += profitLoss;
+          }
+        }
       }
     }
     
@@ -258,12 +268,25 @@ export async function GET() {
   }
 }
 
-// 全ペアの損益を計算してデータベースに保存するAPI
-export async function POST() {
+// 特定企業の損益を計算してデータベースに保存するAPI
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    // 買いまたは売りの証券コードが入力されているペアを取得
+    const companyId = parseInt(params.id);
+    
+    if (isNaN(companyId)) {
+      return NextResponse.json(
+        { error: '無効な企業IDです' },
+        { status: 400 }
+      );
+    }
+
+    // 指定された企業の買いまたは売りの証券コードが入力されているペアを取得
     const pairs = await prisma.pair.findMany({
       where: {
+        companyId: companyId,
         OR: [
           { buyStockCode: { not: null } },
           { sellStockCode: { not: null } }
@@ -356,6 +379,7 @@ export async function POST() {
     }
     
     return NextResponse.json({
+      companyId,
       totalProcessed: pairs.length,
       successCount,
       errorCount,

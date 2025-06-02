@@ -31,6 +31,8 @@ model Pair {
   currentBuyPrice Float?
   currentSellPrice Float?
   profitLoss      Float?
+  buyProfitLoss   Float?
+  sellProfitLoss  Float?
   updatedAt       DateTime?
   companyId       Int
   company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)

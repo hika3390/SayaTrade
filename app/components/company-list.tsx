@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/app/components/ui/button";
 import { CompanyForm } from "@/app/components/company-form";
 import { PairForm } from "@/app/components/pair-form";
@@ -26,6 +26,8 @@ interface Pair {
   currentBuyPrice?: number;
   currentSellPrice?: number;
   profitLoss?: number;
+  buyProfitLoss?: number;
+  sellProfitLoss?: number;
 }
 
 interface CompanyListProps {
@@ -43,8 +45,8 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   const [selectedPair, setSelectedPair] = useState<Pair | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 損益計算APIを呼び出す関数
-  const fetchProfitLossData = async () => {
+  // 全企業の損益計算APIを呼び出す関数
+  const fetchAllProfitLossData = async () => {
     setIsLoading(true);
     try {
       const response = await fetch('/api/calculate-profit-loss');
@@ -71,7 +73,9 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
                     ...pair,
                     currentBuyPrice: profitLossPair.currentBuyPrice,
                     currentSellPrice: profitLossPair.currentSellPrice,
-                    profitLoss: profitLossPair.profitLoss
+                    profitLoss: profitLossPair.profitLoss,
+                    buyProfitLoss: profitLossPair.buyProfitLoss,
+                    sellProfitLoss: profitLossPair.sellProfitLoss
                   };
                 }
                 return pair;
@@ -89,6 +93,59 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
           if (updatedSelectedCompany) {
             setSelectedCompany(updatedSelectedCompany);
           }
+        }
+      }
+    } catch (error) {
+      console.error('損益計算の取得に失敗しました:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 特定企業の損益計算APIを呼び出す関数
+  const fetchCompanyProfitLossData = async (companyId: number) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/companies/${companyId}/calculate-profit-loss`);
+      
+      if (!response.ok) {
+        throw new Error('損益計算に失敗しました');
+      }
+      
+      const data = await response.json();
+      
+      // 企業データを更新
+      const updatedCompanies = companies.map(company => {
+        if (company.id === companyId) {
+          return {
+            ...company,
+            totalProfitLoss: data.totalProfitLoss,
+            pairs: company.pairs.map(pair => {
+              const profitLossPair = data.pairs.find((p: { id: number }) => p.id === pair.id);
+              if (profitLossPair) {
+                return {
+                  ...pair,
+                  currentBuyPrice: profitLossPair.currentBuyPrice,
+                  currentSellPrice: profitLossPair.currentSellPrice,
+                  profitLoss: profitLossPair.profitLoss,
+                  buyProfitLoss: profitLossPair.buyProfitLoss,
+                  sellProfitLoss: profitLossPair.sellProfitLoss
+                };
+              }
+              return pair;
+            })
+          };
+        }
+        return company;
+      });
+      
+      setCompanies(updatedCompanies);
+      
+      // 選択中の企業がある場合、その情報も更新
+      if (selectedCompany && selectedCompany.id === companyId) {
+        const updatedSelectedCompany = updatedCompanies.find((c: Company) => c.id === companyId);
+        if (updatedSelectedCompany) {
+          setSelectedCompany(updatedSelectedCompany);
         }
       }
     } catch (error) {
@@ -308,7 +365,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   };
 
   return (
-    <div className="container mx-auto py-4">
+    <div className="mx-auto p-4">
       {/* ローカルヘッダー */}
       <div className="bg-gray-100 p-4 mb-6 rounded-lg">
         <div className="flex justify-between items-center">
@@ -329,7 +386,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
               <Button onClick={() => setIsAddCompanyOpen(true)}>企業を追加</Button>
               <Button 
                 variant="outline"
-                onClick={fetchProfitLossData}
+                onClick={fetchAllProfitLossData}
                 disabled={isLoading}
               >
                 {isLoading ? "計算中..." : "全体の損益計算"}
@@ -412,6 +469,8 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
                     <th className="border p-2 text-center">売り証券コード</th>
                     <th className="border p-2 text-right">現在買値</th>
                     <th className="border p-2 text-right">現在売値</th>
+                    <th className="border p-2 text-right">買い損益</th>
+                    <th className="border p-2 text-right">売り損益</th>
                     <th className="border p-2 text-right">損益</th>
                     <th className="border p-2 text-center">操作</th>
                   </tr>
@@ -442,6 +501,12 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
                       <td className="border p-2 text-center">{pair.sellStockCode || "-"}</td>
                       <td className="border p-2 text-right">{pair.currentBuyPrice?.toLocaleString() || "-"}</td>
                       <td className="border p-2 text-right">{pair.currentSellPrice?.toLocaleString() || "-"}</td>
+                      <td className={`border p-2 text-right ${pair.buyProfitLoss !== undefined ? (pair.buyProfitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
+                        {pair.buyProfitLoss !== undefined && pair.buyProfitLoss !== null ? `${pair.buyProfitLoss?.toLocaleString()} 円` : "-"}
+                      </td>
+                      <td className={`border p-2 text-right ${pair.sellProfitLoss !== undefined ? (pair.sellProfitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
+                        {pair.sellProfitLoss !== undefined && pair.sellProfitLoss !== null ? `${pair.sellProfitLoss?.toLocaleString()} 円` : "-"}
+                      </td>
                       <td className={`border p-2 text-right ${pair.profitLoss !== undefined ? (pair.profitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
                         {pair.profitLoss !== undefined && pair.profitLoss !== null ? `${pair.profitLoss?.toLocaleString()} 円` : "-"}
                       </td>
@@ -519,7 +584,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
       {selectedCompany && (
         <div className="mt-4 flex justify-end">
           <Button 
-            onClick={fetchProfitLossData}
+            onClick={() => fetchCompanyProfitLossData(selectedCompany.id)}
             disabled={isLoading}
             className="ml-auto"
           >
