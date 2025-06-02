@@ -271,10 +271,18 @@ export async function GET(
 // 特定企業の損益を計算してデータベースに保存するAPI
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const companyId = parseInt(params.id);
+    const { id } = await params;
+    if (isNaN(parseInt(id))) {
+      return NextResponse.json(
+        { error: '無効なIDです' },
+        { status: 400 }
+      );
+    }
+
+    const companyId = parseInt(id);
     
     if (isNaN(companyId)) {
       return NextResponse.json(
