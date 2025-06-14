@@ -142,10 +142,11 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
           </div>
           <div className="flex gap-2">
             <Button 
+              variant="outline"
               onClick={recalculateAndSaveProfitLoss}
               disabled={isLoading || isCalculating}
             >
-              {isLoading ? "読み込み中..." : "損益データを更新"}
+              {isLoading ? "計算中..." : "全体の損益計算"}
             </Button>
           </div>
         </div>
@@ -201,6 +202,7 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
                             <tr className="bg-gray-100">
                               <th className="border p-2 text-left">企業</th>
                               <th className="border p-2 text-left">ペア名</th>
+                              <th className="border p-2 text-left">リンク</th>
                               <th className="border p-2 text-right">買い株数</th>
                               <th className="border p-2 text-right">売り株数</th>
                               <th className="border p-2 text-right">買い単価</th>
@@ -215,6 +217,20 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
                               <tr key={pair.id}>
                                 <td className="border p-2">{pair.company.name}</td>
                                 <td className="border p-2">{pair.name}</td>
+                                <td className="border p-2">
+                                  {pair.link ? (
+                                    <a
+                                      href={pair.link}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-500 hover:underline"
+                                    >
+                                      リンク
+                                    </a>
+                                  ) : (
+                                    "-"
+                                  )}
+                                </td>
                                 <td className="border p-2 text-right">{pair.buyShares}</td>
                                 <td className="border p-2 text-right">{pair.sellShares}</td>
                                 <td className="border p-2 text-right">{pair.buyPrice}</td>
@@ -245,6 +261,7 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
                       <tr className="bg-gray-100">
                         <th className="border p-2 text-left">企業</th>
                         <th className="border p-2 text-left">ペア名</th>
+                        <th className="border p-2 text-left">リンク</th>
                         <th className="border p-2 text-center">買い証券コード</th>
                         <th className="border p-2 text-center">売り証券コード</th>
                         <th className="border p-2 text-right">買い株数</th>
@@ -261,6 +278,20 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
                         <tr key={pair.id}>
                           <td className="border p-2">{pair.company.name}</td>
                           <td className="border p-2">{pair.name}</td>
+                          <td className="border p-2">
+                            {pair.link ? (
+                              <a
+                                href={pair.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 hover:underline"
+                              >
+                                リンク
+                              </a>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
                           <td className="border p-2 text-center">{pair.buyStockCode || "-"}</td>
                           <td className="border p-2 text-center">{pair.sellStockCode || "-"}</td>
                           <td className="border p-2 text-right">{pair.buyShares}</td>

@@ -18,6 +18,7 @@ interface PairFormProps {
   onSubmit: (data: {
     name: string;
     link?: string;
+    analysisRecord?: string;
     buyShares: number;
     sellShares: number;
     buyPrice: number;
@@ -29,6 +30,7 @@ interface PairFormProps {
     id: number;
     name: string;
     link?: string;
+    analysisRecord?: string;
     buyShares: number;
     sellShares: number;
     buyPrice: number;
@@ -48,6 +50,7 @@ export function PairForm({
 }: PairFormProps) {
   const [name, setName] = useState(initialData?.name || "");
   const [link, setLink] = useState(initialData?.link || "");
+  const [analysisRecord, setAnalysisRecord] = useState(initialData?.analysisRecord || "");
   const [buyShares, setBuyShares] = useState(initialData?.buyShares || 0);
   const [sellShares, setSellShares] = useState(initialData?.sellShares || 0);
   const [buyPrice, setBuyPrice] = useState(initialData?.buyPrice || 0);
@@ -60,6 +63,7 @@ export function PairForm({
     if (initialData) {
       setName(initialData.name);
       setLink(initialData.link || "");
+      setAnalysisRecord(initialData.analysisRecord || "");
       setBuyShares(initialData.buyShares);
       setSellShares(initialData.sellShares);
       setBuyPrice(initialData.buyPrice);
@@ -78,6 +82,7 @@ export function PairForm({
       await onSubmit({
         name,
         link: link || undefined,
+        analysisRecord: analysisRecord || undefined,
         buyShares: Number(buyShares),
         sellShares: Number(sellShares),
         buyPrice: Number(buyPrice),
@@ -123,6 +128,18 @@ export function PairForm({
                 onChange={(e) => setLink(e.target.value)}
                 className="col-span-3"
                 placeholder="https://jp.tradingview.com/chart/..."
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="analysisRecord" className="text-right">
+                分析記録
+              </Label>
+              <Input
+                id="analysisRecord"
+                value={analysisRecord}
+                onChange={(e) => setAnalysisRecord(e.target.value)}
+                className="col-span-3"
+                placeholder="https://docs.google.com/..."
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">

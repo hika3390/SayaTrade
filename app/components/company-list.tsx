@@ -4,38 +4,18 @@ import { useState } from "react";
 import { Button } from "@/app/components/ui/button";
 import { CompanyForm } from "@/app/components/company-form";
 import { PairForm } from "@/app/components/pair-form";
-
-interface Company {
-  id: number;
-  name: string;
-  pairs: Pair[];
-  totalProfitLoss?: number;
-}
-
-interface Pair {
-  id: number;
-  name: string;
-  link?: string;
-  buyShares: number;
-  sellShares: number;
-  buyPrice: number;
-  sellPrice: number;
-  buyStockCode?: string;
-  sellStockCode?: string;
-  companyId: number;
-  currentBuyPrice?: number;
-  currentSellPrice?: number;
-  profitLoss?: number;
-  buyProfitLoss?: number;
-  sellProfitLoss?: number;
-}
+import { CompanyCard } from "@/app/components/company-card";
+import { CompanyDetail } from "@/app/components/company-detail";
+import { Pagination } from "@/app/components/pagination";
+import { Company, Pair, PairFormData, CompanyFormData, CompaniesResponse, PaginationInfo } from "@/app/types";
 
 interface CompanyListProps {
-  initialCompanies: Company[];
+  initialData: CompaniesResponse;
 }
 
-export function CompanyList({ initialCompanies }: CompanyListProps) {
-  const [companies, setCompanies] = useState<Company[]>(initialCompanies);
+export function CompanyList({ initialData }: CompanyListProps) {
+  const [companies, setCompanies] = useState<Company[]>(initialData.companies);
+  const [pagination, setPagination] = useState<PaginationInfo>(initialData.pagination);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
   const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
@@ -45,8 +25,35 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   const [selectedPair, setSelectedPair] = useState<Pair | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // 企業一覧を取得する関数
+  const fetchCompanies = async (page: number = 1, limit: number = 5) => {
+    try {
+      const response = await fetch(`/api/companies?page=${page}&limit=${limit}`);
+      
+      if (!response.ok) {
+        throw new Error("企業一覧の取得に失敗しました");
+      }
+      
+      const data: CompaniesResponse = await response.json();
+      setCompanies(data.companies);
+      setPagination(data.pagination);
+    } catch (error) {
+      console.error("企業一覧の取得に失敗しました:", error);
+    }
+  };
+
+  // ページ変更ハンドラ
+  const handlePageChange = (page: number) => {
+    fetchCompanies(page, pagination.limit);
+  };
+
   // 全企業の損益計算APIを呼び出す関数
   const fetchAllProfitLossData = async () => {
+    // 処理が重たくなる旨の確認アラート
+    if (!confirm("全体の損益計算を実行します。\n\n株価データの取得により処理に時間がかかる場合があります。\n実行してもよろしいですか？")) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch('/api/calculate-profit-loss');
@@ -166,11 +173,18 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
       
       const pairs = await response.json();
       
+      // ペア情報に決済状態のフィールドを含めて整形
+      const formattedPairs = pairs.map((pair: any) => ({
+        ...pair,
+        isSettled: pair.isSettled || false,
+        settledAt: pair.settledAt || undefined
+      }));
+
       // 企業のペア情報を更新（関数型更新を使用）
       setCompanies(prevCompanies =>
         prevCompanies.map((company) =>
           company.id === companyId
-            ? { ...company, pairs }
+            ? { ...company, pairs: formattedPairs }
             : company
         )
       );
@@ -178,7 +192,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
       // 選択中の企業のペア情報も更新（関数型更新を使用）
       if (selectedCompany && selectedCompany.id === companyId) {
         setSelectedCompany(prevSelectedCompany => 
-          prevSelectedCompany ? { ...prevSelectedCompany, pairs } : null
+          prevSelectedCompany ? { ...prevSelectedCompany, pairs: formattedPairs } : null
         );
       }
     } catch (error) {
@@ -187,7 +201,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   };
 
   // 企業の追加
-  const handleAddCompany = async (data: { name: string }) => {
+  const handleAddCompany = async (data: CompanyFormData) => {
     try {
       const response = await fetch("/api/companies", {
         method: "POST",
@@ -209,7 +223,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   };
 
   // 企業の更新
-  const handleUpdateCompany = async (data: { name: string }) => {
+  const handleUpdateCompany = async (data: CompanyFormData) => {
     if (!companyToEdit) return;
 
     try {
@@ -263,16 +277,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   };
 
   // ペア情報の追加
-  const handleAddPair = async (data: {
-    name: string;
-    link?: string;
-    buyShares: number;
-    sellShares: number;
-    buyPrice: number;
-    sellPrice: number;
-    buyStockCode?: string;
-    sellStockCode?: string;
-  }) => {
+  const handleAddPair = async (data: PairFormData) => {
     if (!selectedCompany) return;
 
     try {
@@ -296,16 +301,7 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
   };
 
   // ペア情報の更新
-  const handleUpdatePair = async (data: {
-    name: string;
-    link?: string;
-    buyShares: number;
-    sellShares: number;
-    buyPrice: number;
-    sellPrice: number;
-    buyStockCode?: string;
-    sellStockCode?: string;
-  }) => {
+  const handleUpdatePair = async (data: PairFormData) => {
     if (!selectedPair || !selectedCompany) return;
 
     try {
@@ -352,6 +348,32 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
     }
   };
 
+  // ペアの決済処理
+  const handleSettlePair = async (pairId: number) => {
+    if (!confirm("このペアを決済してもよろしいですか？")) {
+      return;
+    }
+
+    if (!selectedCompany) return;
+
+    try {
+      const response = await fetch(`/api/pairs/${pairId}/settle`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "決済処理に失敗しました");
+      }
+
+      // 企業のペア情報を再取得
+      await fetchCompanyPairs(selectedCompany.id);
+    } catch (error) {
+      console.error("決済処理に失敗しました:", error);
+      alert(`決済処理に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+    }
+  };
+
   // ペア情報表示ボタンのクリックハンドラ
   const handleShowPairs = (company: Company) => {
     setSelectedCompany(company);
@@ -366,178 +388,71 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
 
   return (
     <div className="mx-auto p-4">
-      {/* ローカルヘッダー */}
-      <div className="bg-gray-100 p-4 mb-6 rounded-lg">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-semibold">
-              {selectedCompany ? `企業詳細: ${selectedCompany.name}` : '企業一覧'}
-            </h1>
-          </div>
-          {selectedCompany ? (
-            <div className="flex gap-2">
-              <Button onClick={() => setIsAddPairOpen(true)}>ペア情報を追加</Button>
-              <Button variant="outline" onClick={handleBackToCompanies}>
-                企業一覧に戻る
-              </Button>
-            </div>
-          ) : (
-            <div className="flex gap-2">
-              <Button onClick={() => setIsAddCompanyOpen(true)}>企業を追加</Button>
-              <Button 
-                variant="outline"
-                onClick={fetchAllProfitLossData}
-                disabled={isLoading}
-              >
-                {isLoading ? "計算中..." : "全体の損益計算"}
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* メインコンテンツ */}
       {!selectedCompany ? (
-        // 企業一覧
-        <div className="grid gap-4">
-          {companies.length === 0 ? (
-            <p className="text-center py-8 text-gray-500">
-              企業が登録されていません。「企業を追加」ボタンから企業を登録してください。
-            </p>
-          ) : (
-            companies.map((company) => (
-              <div
-                key={company.id}
-                className="border p-4 rounded-lg flex justify-between items-center"
-              >
-                <div>
-                  <h2 className="text-xl font-semibold">{company.name}</h2>
-                  <p className="text-sm text-gray-500">
-                    登録ペア数: {company.pairs.length}
-                  </p>
-                  {company.totalProfitLoss !== undefined && (
-                    <p className={`text-sm font-medium ${company.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      損益合計: {company.totalProfitLoss.toLocaleString()} 円
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handleShowPairs(company)}
-                  >
-                    ペア情報を表示
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setCompanyToEdit(company);
-                      setIsEditCompanyOpen(true);
-                    }}
-                  >
-                    編集
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleDeleteCompany(company.id)}
-                  >
-                    削除
-                  </Button>
-                </div>
+        <>
+          {/* 企業一覧ヘッダー */}
+          <div className="bg-gray-100 p-4 mb-6 rounded-lg">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center space-x-4">
+                <h1 className="text-xl font-semibold">企業一覧</h1>
               </div>
-            ))
-          )}
-        </div>
+              <div className="flex gap-2">
+                <Button onClick={() => setIsAddCompanyOpen(true)}>企業を追加</Button>
+                <Button 
+                  variant="outline"
+                  onClick={fetchAllProfitLossData}
+                  disabled={isLoading}
+                >
+                  {isLoading ? "計算中..." : "全体の損益計算"}
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          {/* 企業一覧 */}
+          <div className="grid gap-4">
+            {companies.length === 0 ? (
+              <p className="text-center py-8 text-gray-500">
+                企業が登録されていません。「企業を追加」ボタンから企業を登録してください。
+              </p>
+            ) : (
+              companies.map((company) => (
+                <CompanyCard
+                  key={company.id}
+                  company={company}
+                  onShowPairs={handleShowPairs}
+                  onEdit={(company) => {
+                    setCompanyToEdit(company);
+                    setIsEditCompanyOpen(true);
+                  }}
+                  onDelete={handleDeleteCompany}
+                />
+              ))
+            )}
+          </div>
+
+          {/* ページネーション */}
+          <Pagination
+            pagination={pagination}
+            onPageChange={handlePageChange}
+          />
+        </>
       ) : (
         // 選択された企業のペア情報
-        <div>
-          {selectedCompany.pairs.length === 0 ? (
-            <p className="text-center py-8 text-gray-500">
-              ペア情報が登録されていません。「ペア情報を追加」ボタンからペア情報を登録してください。
-            </p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border p-2 text-left">ペア名</th>
-                    <th className="border p-2 text-left">リンク</th>
-                    <th className="border p-2 text-right">買い株数</th>
-                    <th className="border p-2 text-right">売り株数</th>
-                    <th className="border p-2 text-right">買い単価</th>
-                    <th className="border p-2 text-right">売り単価</th>
-                    <th className="border p-2 text-center">買い証券コード</th>
-                    <th className="border p-2 text-center">売り証券コード</th>
-                    <th className="border p-2 text-right">現在買値</th>
-                    <th className="border p-2 text-right">現在売値</th>
-                    <th className="border p-2 text-right">買い損益</th>
-                    <th className="border p-2 text-right">売り損益</th>
-                    <th className="border p-2 text-right">損益</th>
-                    <th className="border p-2 text-center">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedCompany.pairs.map((pair) => (
-                    <tr key={pair.id}>
-                      <td className="border p-2">{pair.name}</td>
-                      <td className="border p-2">
-                        {pair.link ? (
-                          <a
-                            href={pair.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
-                          >
-                            リンク
-                          </a>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="border p-2 text-right">{pair.buyShares}</td>
-                      <td className="border p-2 text-right">{pair.sellShares}</td>
-                      <td className="border p-2 text-right">{pair.buyPrice}</td>
-                      <td className="border p-2 text-right">{pair.sellPrice}</td>
-                      <td className="border p-2 text-center">{pair.buyStockCode || "-"}</td>
-                      <td className="border p-2 text-center">{pair.sellStockCode || "-"}</td>
-                      <td className="border p-2 text-right">{pair.currentBuyPrice?.toLocaleString() || "-"}</td>
-                      <td className="border p-2 text-right">{pair.currentSellPrice?.toLocaleString() || "-"}</td>
-                      <td className={`border p-2 text-right ${pair.buyProfitLoss !== undefined ? (pair.buyProfitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
-                        {pair.buyProfitLoss !== undefined && pair.buyProfitLoss !== null ? `${pair.buyProfitLoss?.toLocaleString()} 円` : "-"}
-                      </td>
-                      <td className={`border p-2 text-right ${pair.sellProfitLoss !== undefined ? (pair.sellProfitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
-                        {pair.sellProfitLoss !== undefined && pair.sellProfitLoss !== null ? `${pair.sellProfitLoss?.toLocaleString()} 円` : "-"}
-                      </td>
-                      <td className={`border p-2 text-right ${pair.profitLoss !== undefined ? (pair.profitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
-                        {pair.profitLoss !== undefined && pair.profitLoss !== null ? `${pair.profitLoss?.toLocaleString()} 円` : "-"}
-                      </td>
-                      <td className="border p-2">
-                        <div className="flex justify-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPair(pair);
-                              setIsEditPairOpen(true);
-                            }}
-                          >
-                            編集
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeletePair(pair.id)}
-                          >
-                            削除
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        <CompanyDetail
+          company={selectedCompany}
+          isLoading={isLoading}
+          onAddPair={() => setIsAddPairOpen(true)}
+          onBackToCompanies={handleBackToCompanies}
+          onEditPair={(pair) => {
+            setSelectedPair(pair);
+            setIsEditPairOpen(true);
+          }}
+          onDeletePair={handleDeletePair}
+          onSettlePair={handleSettlePair}
+          onCalculateProfitLoss={fetchCompanyProfitLossData}
+        />
       )}
 
       {/* 企業追加フォーム */}
@@ -578,19 +493,6 @@ export function CompanyList({ initialCompanies }: CompanyListProps) {
           initialData={selectedPair}
           title="ペア情報を編集"
         />
-      )}
-
-      {/* 損益計算ボタン */}
-      {selectedCompany && (
-        <div className="mt-4 flex justify-end">
-          <Button 
-            onClick={() => fetchCompanyProfitLossData(selectedCompany.id)}
-            disabled={isLoading}
-            className="ml-auto"
-          >
-            {isLoading ? "計算中..." : "損益を再計算"}
-          </Button>
-        </div>
       )}
     </div>
   );

@@ -2,11 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
 
 // 企業一覧を取得
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '5');
+    const skip = (page - 1) * limit;
+
+    // 総企業数を取得
+    const totalCount = await prisma.company.count();
+    
     const companies = await prisma.company.findMany({
       include: {
         pairs: true,
+      },
+      skip,
+      take: limit,
+      orderBy: {
+        id: 'desc', // 新しい企業から表示
       },
     });
     
@@ -29,7 +42,19 @@ export async function GET() {
       };
     });
     
-    return NextResponse.json(companiesWithProfitLoss);
+    const totalPages = Math.ceil(totalCount / limit);
+    
+    return NextResponse.json({
+      companies: companiesWithProfitLoss,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    });
   } catch (error) {
     console.error('企業一覧の取得に失敗しました:', error);
     return NextResponse.json(

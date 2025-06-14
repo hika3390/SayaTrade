@@ -170,11 +170,15 @@ export async function GET(
       );
     }
 
-    // 指定された企業とそのペア情報を取得
+    // 指定された企業とそのペア情報を取得（決済済みペアを除外）
     const company = await prisma.company.findUnique({
       where: { id: companyId },
       include: {
-        pairs: true,
+        pairs: {
+          where: {
+            isSettled: false, // 決済済みペアを除外
+          },
+        },
       },
     });
 
@@ -291,10 +295,11 @@ export async function POST(
       );
     }
 
-    // 指定された企業の買いまたは売りの証券コードが入力されているペアを取得
+    // 指定された企業の買いまたは売りの証券コードが入力されているペアを取得（決済済みペアを除外）
     const pairs = await prisma.pair.findMany({
       where: {
         companyId: companyId,
+        isSettled: false, // 決済済みペアを除外
         OR: [
           { buyStockCode: { not: null } },
           { sellStockCode: { not: null } }

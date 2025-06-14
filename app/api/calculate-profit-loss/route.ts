@@ -151,10 +151,14 @@ async function saveProfitLossToDatabase(
 // 全ペアの損益を計算するAPI
 export async function GET() {
   try {
-    // 全ての企業とそのペア情報を取得
+    // 全ての企業とそのペア情報を取得（決済済みペアを除外）
     const companies = await prisma.company.findMany({
       include: {
-        pairs: true,
+        pairs: {
+          where: {
+            isSettled: false, // 決済済みペアを除外
+          },
+        },
       },
     });
     
@@ -261,9 +265,10 @@ export async function GET() {
 // 全ペアの損益を計算してデータベースに保存するAPI
 export async function POST() {
   try {
-    // 買いまたは売りの証券コードが入力されているペアを取得
+    // 買いまたは売りの証券コードが入力されているペアを取得（決済済みペアを除外）
     const pairs = await prisma.pair.findMany({
       where: {
+        isSettled: false, // 決済済みペアを除外
         OR: [
           { buyStockCode: { not: null } },
           { sellStockCode: { not: null } }

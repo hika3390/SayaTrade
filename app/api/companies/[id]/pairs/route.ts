@@ -96,6 +96,7 @@ export async function POST(
       data: {
         name: data.name,
         link: data.link || null,
+        analysisRecord: data.analysisRecord || null,
         buyShares,
         sellShares,
         buyPrice,

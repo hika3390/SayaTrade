@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { CompanyList } from "@/app/components/company-list";
 import { DuplicatePairsView } from "@/app/components/duplicate-pairs-view";
+import { CompaniesResponse } from "@/app/types";
 
 // 画面の種類を定義
 type ViewType = 'companies' | 'duplicatePairs';
@@ -47,41 +48,47 @@ export default function Home() {
 
 // クライアントコンポーネントでデータを取得するためのラッパー
 function CompanyListWrapper() {
-  const [companies, setCompanies] = useState([]);
+  const [companiesData, setCompaniesData] = useState<CompaniesResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const data = await fetch('/api/companies', { cache: 'no-store' });
-        const companiesData = await data.json();
+        const response = await fetch('/api/companies?page=1&limit=5', { cache: 'no-store' });
+        const data: CompaniesResponse = await response.json();
         
         // Prismaから取得したデータを適切な形式に変換
-        const formattedCompanies = companiesData.map((company: any) => ({
-          id: company.id,
-          name: company.name,
-          totalProfitLoss: company.totalProfitLoss, // 企業全体の損益を追加
-          pairs: company.pairs ? company.pairs.map((pair: any) => ({
-            id: pair.id,
-            name: pair.name,
-            link: pair.link || undefined, // nullの場合はundefinedに変換
-            buyShares: pair.buyShares,
-            sellShares: pair.sellShares,
-            buyPrice: pair.buyPrice,
-            sellPrice: pair.sellPrice,
-            buyStockCode: pair.buyStockCode || undefined, // 証券コードを追加
-            sellStockCode: pair.sellStockCode || undefined, // 証券コードを追加
-            companyId: pair.companyId,
-            currentBuyPrice: pair.currentBuyPrice, // 現在の買い価格を追加
-            currentSellPrice: pair.currentSellPrice, // 現在の売り価格を追加
-            profitLoss: pair.profitLoss, // 損益情報を追加
-            buyProfitLoss: pair.buyProfitLoss, // 買いの損益情報を追加
-            sellProfitLoss: pair.sellProfitLoss // 売りの損益情報を追加
-          })) : []
-        }));
+        const formattedData: CompaniesResponse = {
+          companies: data.companies.map((company: any) => ({
+            id: company.id,
+            name: company.name,
+            totalProfitLoss: company.totalProfitLoss, // 企業全体の損益を追加
+            pairs: company.pairs ? company.pairs.map((pair: any) => ({
+              id: pair.id,
+              name: pair.name,
+              link: pair.link || undefined, // nullの場合はundefinedに変換
+              analysisRecord: pair.analysisRecord || undefined, // nullの場合はundefinedに変換
+              buyShares: pair.buyShares,
+              sellShares: pair.sellShares,
+              buyPrice: pair.buyPrice,
+              sellPrice: pair.sellPrice,
+              buyStockCode: pair.buyStockCode || undefined, // 証券コードを追加
+              sellStockCode: pair.sellStockCode || undefined, // 証券コードを追加
+              companyId: pair.companyId,
+              currentBuyPrice: pair.currentBuyPrice, // 現在の買い価格を追加
+              currentSellPrice: pair.currentSellPrice, // 現在の売り価格を追加
+              profitLoss: pair.profitLoss, // 損益情報を追加
+              buyProfitLoss: pair.buyProfitLoss, // 買いの損益情報を追加
+              sellProfitLoss: pair.sellProfitLoss, // 売りの損益情報を追加
+              isSettled: pair.isSettled || false, // 決済状態を追加
+              settledAt: pair.settledAt || undefined // 決済日時を追加
+            })) : []
+          })),
+          pagination: data.pagination
+        };
         
-        setCompanies(formattedCompanies);
+        setCompaniesData(formattedData);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
       } finally {
@@ -100,5 +107,9 @@ function CompanyListWrapper() {
     return <div className="container mx-auto py-8 text-center text-red-500">エラー: {error}</div>;
   }
 
-  return <CompanyList initialCompanies={companies} />;
+  if (!companiesData) {
+    return <div className="container mx-auto py-8 text-center text-red-500">データの取得に失敗しました</div>;
+  }
+
+  return <CompanyList initialData={companiesData} />;
 }
