@@ -6,6 +6,8 @@ export interface DailyQuote {
   High: number;
   Low: number;
   Close: number;
+  MorningClose: number;     // 前場終値
+  AfternoonClose: number;   // 後場終値
   Volume: number;
   AdjustmentClose?: number;  // 調整後終値
   VWAP?: number;             // 出来高加重平均価格

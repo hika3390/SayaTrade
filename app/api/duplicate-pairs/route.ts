@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import { fetchStockPrice } from '@/app/lib/stock-price-utils';
 
 interface PairWithPrices {
   id: number;
@@ -28,54 +29,6 @@ interface DuplicatePairGroup {
   };
   pairs: PairWithPrices[];
   totalProfitLoss: number;
-}
-
-// 日付をYYYY-MM-DD形式にフォーマットする関数
-function formatDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-// 現在の株価を取得する関数
-async function fetchStockPrice(stockCode: string): Promise<number | null> {
-  try {
-    // J-Quants APIを直接使用して株価を取得
-    const JQuantsApi = (await import('@/app/lib/jquants/api')).default;
-    const jquantsApi = JQuantsApi.getInstance();
-    
-    // 現在の日付を取得
-    const today = new Date();
-    const formattedDate = formatDate(today);
-    
-    // 7日前の日付を取得（休日や株価が取得できない日に対応するため）
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const formattedSevenDaysAgo = formatDate(sevenDaysAgo);
-    
-    // J-Quants APIから株価データを取得
-    const quotes = await jquantsApi.getDailyQuotes(
-      stockCode,
-      formattedSevenDaysAgo,
-      formattedDate
-    );
-    
-    if (!quotes || quotes.length === 0) {
-      console.error(`証券コード ${stockCode} の株価データが見つかりません`);
-      return null;
-    }
-    
-    // 最新の株価を取得（配列の最後の要素）
-    const latestQuote = quotes[quotes.length - 1];
-    const price = latestQuote.Close;
-    
-    console.log(`証券コード ${stockCode} の株価を取得: ${price}円 (${latestQuote.Date || '日付不明'})`);
-    return price;
-  } catch (error) {
-    console.error(`証券コード ${stockCode} の株価取得中にエラーが発生しました:`, error);
-    return null;
-  }
 }
 
 // 損益を計算する関数
