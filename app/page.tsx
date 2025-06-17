@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react";
 import { CompanyList } from "@/app/components/company-list";
 import { DuplicatePairsView } from "@/app/components/duplicate-pairs-view";
+import { TradingHistory } from "@/app/components/trading-history";
 import { CompaniesResponse } from "@/app/types";
 
 // 画面の種類を定義
-type ViewType = 'companies' | 'duplicatePairs';
+type ViewType = 'companies' | 'duplicatePairs' | 'tradingHistory';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>('companies');
@@ -30,6 +31,12 @@ export default function Home() {
             >
               重複ペア一覧
             </button>
+            <button 
+              className={`px-3 py-1 rounded ${currentView === 'tradingHistory' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
+              onClick={() => setCurrentView('tradingHistory')}
+            >
+              取引履歴
+            </button>
           </div>
         </div>
       </nav>
@@ -38,8 +45,10 @@ export default function Home() {
       <div className="mx-auto p-4">
         {currentView === 'companies' ? (
           <CompanyListWrapper />
-        ) : (
+        ) : currentView === 'duplicatePairs' ? (
           <DuplicatePairsView onBack={() => setCurrentView('companies')} />
+        ) : (
+          <TradingHistory onBack={() => setCurrentView('companies')} />
         )}
       </div>
     </div>

@@ -37,6 +37,9 @@ export function PairTable({ pairs, title, isSettled = false, onEdit, onDelete, o
               <th className="border p-2 text-center">
                 {isSettled ? "決済日時" : "操作"}
               </th>
+              {isSettled && (
+                <th className="border p-2 text-center">操作</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -127,11 +130,35 @@ export function PairTable({ pairs, title, isSettled = false, onEdit, onDelete, o
                       </div>
                     )}
                   </td>
+                  {isSettled && (
+                    <td className="border p-2">
+                      <div className="flex justify-center gap-1 flex-wrap">
+                        {onEdit && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onEdit(pair)}
+                          >
+                            編集
+                          </Button>
+                        )}
+                        {onDelete && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => onDelete(pair.id)}
+                          >
+                            削除
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={15} className="border p-4 text-center text-gray-500">
+                <td colSpan={isSettled ? 16 : 15} className="border p-4 text-center text-gray-500">
                   {isSettled ? "決済済みペアはありません" : "未決済ペアはありません"}
                 </td>
               </tr>

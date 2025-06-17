@@ -81,6 +81,8 @@ export function CompanyDetail({
             pairs={settledPairs}
             title="決済済みペア"
             isSettled={true}
+            onEdit={onEditPair}
+            onDelete={onDeletePair}
           />
         </div>
       )}
