@@ -395,7 +395,7 @@ export function CompanyList({ initialData }: CompanyListProps) {
           <div className="bg-gray-100 p-4 mb-6 rounded-lg">
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-4">
-                <h1 className="text-xl font-semibold">企業一覧</h1>
+                <h1 className="text-2xl font-bold">企業一覧</h1>
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => setIsAddCompanyOpen(true)}>企業を追加</Button>

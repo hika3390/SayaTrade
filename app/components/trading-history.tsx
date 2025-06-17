@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
+import { PairFilter } from "@/app/components/pair-filter";
+import { usePairFilter } from "@/app/hooks/use-pair-filter";
 import { Company, Pair } from "@/app/types";
 
 interface TradingHistoryProps {
@@ -12,9 +14,6 @@ export function TradingHistory({ onBack }: TradingHistoryProps) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCompany, setSelectedCompany] = useState<string>('all');
-  const [stockCodeFilter, setStockCodeFilter] = useState<string>('');
-  const [settlementStatusFilter, setSettlementStatusFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchAllCompanies();
@@ -69,51 +68,27 @@ export function TradingHistory({ onBack }: TradingHistoryProps) {
     }))
   );
 
-  // 複合フィルタリング
-  const filteredPairs = allPairs.filter(pair => {
-    // 企業フィルター
-    if (selectedCompany !== 'all' && pair.companyId.toString() !== selectedCompany) {
-      return false;
-    }
+  // フィルターフックを使用
+  const {
+    stockCodeFilter,
+    setStockCodeFilter,
+    settlementStatusFilter,
+    setSettlementStatusFilter,
+    companyFilter,
+    setCompanyFilter,
+    filteredPairs,
+    clearFilters,
+  } = usePairFilter({ pairs: allPairs, showCompanyFilter: true });
 
-    // 証券コードフィルター
-    if (stockCodeFilter) {
-      const hasMatchingCode = 
-        (pair.buyStockCode && pair.buyStockCode.includes(stockCodeFilter)) ||
-        (pair.sellStockCode && pair.sellStockCode.includes(stockCodeFilter));
-      if (!hasMatchingCode) {
-        return false;
-      }
-    }
-
-    // 決済状態フィルター
-    if (settlementStatusFilter === 'active' && pair.isSettled) {
-      return false;
-    }
-    if (settlementStatusFilter === 'settled' && !pair.isSettled) {
-      return false;
-    }
-
-
-    return true;
-  });
-
-  // 未決済と決済済みに分離
-  const activePairs = filteredPairs.filter(pair => !pair.isSettled);
-  const settledPairs = filteredPairs.filter(pair => pair.isSettled);
+  // 未決済と決済済みに分離（型を明示的にキャスト）
+  const activePairs = filteredPairs.filter(pair => !pair.isSettled) as (Pair & { companyName: string })[];
+  const settledPairs = filteredPairs.filter(pair => pair.isSettled) as (Pair & { companyName: string })[];
 
   // 統計情報の計算
   const totalActivePairs = activePairs.length;
   const totalSettledPairs = settledPairs.length;
   const totalProfitLoss = settledPairs.reduce((sum, pair) => sum + (pair.profitLoss || 0), 0);
   const unrealizedProfitLoss = activePairs.reduce((sum, pair) => sum + (pair.profitLoss || 0), 0);
-
-  // フィルタークリア関数
-  const clearFilters = () => {
-    setSelectedCompany('all');
-    setStockCodeFilter('');
-    setSettlementStatusFilter('all');
-  };
 
   if (isLoading) {
     return (
@@ -143,62 +118,21 @@ export function TradingHistory({ onBack }: TradingHistoryProps) {
         </div>
         
         {/* フィルター */}
-        <div className="mb-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* 企業フィルター */}
-            <div>
-              <label htmlFor="company-filter" className="block text-sm font-medium mb-2">
-                企業:
-              </label>
-              <select
-                id="company-filter"
-                value={selectedCompany}
-                onChange={(e) => setSelectedCompany(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white"
-              >
-                <option value="all">全企業</option>
-                {companies.map(company => (
-                  <option key={company.id} value={company.id.toString()}>
-                    {company.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 証券コードフィルター */}
-            <div>
-              <label htmlFor="stock-code-filter" className="block text-sm font-medium mb-2">
-                証券コード:
-              </label>
-              <input
-                id="stock-code-filter"
-                type="text"
-                value={stockCodeFilter}
-                onChange={(e) => setStockCodeFilter(e.target.value)}
-                placeholder="例: 7203"
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              />
-            </div>
-
-            {/* 決済状態フィルター */}
-            <div>
-              <label htmlFor="settlement-filter" className="block text-sm font-medium mb-2">
-                決済状態:
-              </label>
-              <select
-                id="settlement-filter"
-                value={settlementStatusFilter}
-                onChange={(e) => setSettlementStatusFilter(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white"
-              >
-                <option value="all">全て</option>
-                <option value="active">未決済のみ</option>
-                <option value="settled">決済済みのみ</option>
-              </select>
-            </div>
+        {allPairs.length > 0 && (
+          <div className="mb-4">
+            <PairFilter
+              stockCodeFilter={stockCodeFilter}
+              setStockCodeFilter={setStockCodeFilter}
+              settlementStatusFilter={settlementStatusFilter}
+              setSettlementStatusFilter={setSettlementStatusFilter}
+              onClearFilters={clearFilters}
+              showCompanyFilter={true}
+              companyFilter={companyFilter}
+              setCompanyFilter={setCompanyFilter}
+              companies={companies}
+            />
           </div>
-
-        </div>
+        )}
 
         {/* 統計情報 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
@@ -234,7 +168,7 @@ export function TradingHistory({ onBack }: TradingHistoryProps) {
               pairs={activePairs}
               title="未決済ペア"
               isSettled={false}
-              showCompanyName={selectedCompany === 'all'}
+              showCompanyName={companyFilter === 'all'}
             />
           </div>
         )}
@@ -246,7 +180,7 @@ export function TradingHistory({ onBack }: TradingHistoryProps) {
               pairs={settledPairs}
               title="決済済みペア"
               isSettled={true}
-              showCompanyName={selectedCompany === 'all'}
+              showCompanyName={companyFilter === 'all'}
             />
           </div>
         )}
@@ -256,7 +190,7 @@ export function TradingHistory({ onBack }: TradingHistoryProps) {
           <div className="text-center py-8 text-gray-500">
             {filteredPairs.length === 0 && allPairs.length > 0
               ? 'フィルター条件に一致する取引履歴がありません'
-              : selectedCompany === 'all' 
+              : companyFilter === 'all' 
                 ? '取引履歴がありません' 
                 : '選択した企業の取引履歴がありません'
             }

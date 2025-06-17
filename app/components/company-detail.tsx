@@ -2,6 +2,8 @@
 
 import { Button } from "@/app/components/ui/button";
 import { PairTable } from "@/app/components/pair-table";
+import { PairFilter } from "@/app/components/pair-filter";
+import { usePairFilter } from "@/app/hooks/use-pair-filter";
 import { Company, Pair } from "@/app/types";
 
 interface CompanyDetailProps {
@@ -25,30 +27,59 @@ export function CompanyDetail({
   onSettlePair,
   onCalculateProfitLoss,
 }: CompanyDetailProps) {
-  const activePairs = company.pairs.filter(pair => !pair.isSettled);
-  const settledPairs = company.pairs.filter(pair => pair.isSettled);
+  // フィルターフックを使用
+  const {
+    stockCodeFilter,
+    setStockCodeFilter,
+    settlementStatusFilter,
+    setSettlementStatusFilter,
+    filteredPairs,
+    clearFilters,
+  } = usePairFilter({ pairs: company.pairs, showCompanyFilter: false });
+
+  const activePairs = filteredPairs.filter(pair => !pair.isSettled);
+  const settledPairs = filteredPairs.filter(pair => pair.isSettled);
 
   return (
     <div>
       {/* ヘッダー */}
       <div className="bg-gray-100 p-4 mb-6 rounded-lg">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex items-center space-x-4">
             <h1 className="text-xl font-semibold">企業詳細: {company.name}</h1>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={clearFilters}>
+              フィルタークリア
+            </Button>
             <Button onClick={onAddPair}>ペア情報を追加</Button>
             <Button variant="outline" onClick={onBackToCompanies}>
               企業一覧に戻る
             </Button>
           </div>
         </div>
+
+        {/* フィルター */}
+        {company.pairs.length > 0 && (
+          <PairFilter
+            stockCodeFilter={stockCodeFilter}
+            setStockCodeFilter={setStockCodeFilter}
+            settlementStatusFilter={settlementStatusFilter}
+            setSettlementStatusFilter={setSettlementStatusFilter}
+            onClearFilters={clearFilters}
+            showCompanyFilter={false}
+          />
+        )}
       </div>
 
       {/* メインコンテンツ */}
       {company.pairs.length === 0 ? (
         <p className="text-center py-8 text-gray-500">
           ペア情報が登録されていません。「ペア情報を追加」ボタンからペア情報を登録してください。
+        </p>
+      ) : filteredPairs.length === 0 ? (
+        <p className="text-center py-8 text-gray-500">
+          フィルター条件に一致するペアがありません。
         </p>
       ) : (
         <div className="space-y-8">
@@ -77,13 +108,15 @@ export function CompanyDetail({
           )}
 
           {/* 決済済みペアテーブル */}
-          <PairTable
-            pairs={settledPairs}
-            title="決済済みペア"
-            isSettled={true}
-            onEdit={onEditPair}
-            onDelete={onDeletePair}
-          />
+          {settledPairs.length > 0 && (
+            <PairTable
+              pairs={settledPairs}
+              title="決済済みペア"
+              isSettled={true}
+              onEdit={onEditPair}
+              onDelete={onDeletePair}
+            />
+          )}
         </div>
       )}
     </div>
