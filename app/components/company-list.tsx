@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/app/components/ui/button";
 import { CompanyForm } from "@/app/components/company-form";
 import { PairForm } from "@/app/components/pair-form";
+import { SettledPairForm } from "@/app/components/settled-pair-form";
 import { CompanyCard } from "@/app/components/company-card";
 import { CompanyDetail } from "@/app/components/company-detail";
 import { Pagination } from "@/app/components/pagination";
@@ -22,6 +23,7 @@ export function CompanyList({ initialData }: CompanyListProps) {
   const [isEditCompanyOpen, setIsEditCompanyOpen] = useState(false);
   const [isAddPairOpen, setIsAddPairOpen] = useState(false);
   const [isEditPairOpen, setIsEditPairOpen] = useState(false);
+  const [isEditSettledPairOpen, setIsEditSettledPairOpen] = useState(false);
   const [selectedPair, setSelectedPair] = useState<Pair | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -324,6 +326,43 @@ export function CompanyList({ initialData }: CompanyListProps) {
     }
   };
 
+  // 決済済みペアの更新（全項目対応）
+  const handleUpdateSettledPair = async (data: {
+    name: string;
+    link?: string;
+    analysisRecord?: string;
+    buyShares: number;
+    sellShares: number;
+    buyPrice: number;
+    sellPrice: number;
+    buyStockCode?: string;
+    sellStockCode?: string;
+    currentBuyPrice?: number;
+    currentSellPrice?: number;
+  }) => {
+    if (!selectedPair || !selectedCompany) return;
+
+    try {
+      const response = await fetch(`/api/pairs/${selectedPair.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error("決済済みペア情報の更新に失敗しました");
+      }
+
+      // 企業のペア情報を再取得
+      await fetchCompanyPairs(selectedCompany.id);
+    } catch (error) {
+      console.error("決済済みペア情報の更新に失敗しました:", error);
+      alert(`決済済みペア情報の更新に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`);
+    }
+  };
+
   // ペア情報の削除
   const handleDeletePair = async (id: number) => {
     if (!confirm("このペア情報を削除してもよろしいですか？")) {
@@ -447,7 +486,11 @@ export function CompanyList({ initialData }: CompanyListProps) {
           onBackToCompanies={handleBackToCompanies}
           onEditPair={(pair) => {
             setSelectedPair(pair);
-            setIsEditPairOpen(true);
+            if (pair.isSettled) {
+              setIsEditSettledPairOpen(true);
+            } else {
+              setIsEditPairOpen(true);
+            }
           }}
           onDeletePair={handleDeletePair}
           onSettlePair={handleSettlePair}
@@ -492,6 +535,17 @@ export function CompanyList({ initialData }: CompanyListProps) {
           onSubmit={handleUpdatePair}
           initialData={selectedPair}
           title="ペア情報を編集"
+        />
+      )}
+
+      {/* 決済済みペア編集フォーム */}
+      {selectedPair && (
+        <SettledPairForm
+          isOpen={isEditSettledPairOpen}
+          onClose={() => setIsEditSettledPairOpen(false)}
+          onSubmit={handleUpdateSettledPair}
+          initialData={selectedPair}
+          title="決済済みペア情報を編集"
         />
       )}
     </div>

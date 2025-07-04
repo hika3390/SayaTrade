@@ -66,6 +66,8 @@ export async function GET() {
         // 買いと売りの両方に証券コードが入力されているペアのみ
         buyStockCode: { not: null },
         sellStockCode: { not: null },
+        // 未決済ポジションのみ
+        isSettled: false,
       },
     });
     

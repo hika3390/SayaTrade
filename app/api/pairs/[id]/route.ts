@@ -90,6 +90,23 @@ export async function PUT(
       );
     }
     
+    const currentBuyPrice = data.currentBuyPrice ? parseFloat(data.currentBuyPrice) : existingPair.currentBuyPrice;
+    const currentSellPrice = data.currentSellPrice ? parseFloat(data.currentSellPrice) : existingPair.currentSellPrice;
+    let buyProfitLoss = existingPair.buyProfitLoss;
+    let sellProfitLoss = existingPair.sellProfitLoss;
+    let profitLoss = existingPair.profitLoss;
+
+    if (existingPair.isSettled) {
+      if (currentBuyPrice !== null && currentSellPrice !== null) {
+        // 買いポジションの損益計算（現在価格 - 買い単価）× 株数
+        buyProfitLoss = (currentBuyPrice - buyPrice) * buyShares;
+        // 売りポジションの損益計算（売り単価 - 現在価格）× 株数
+        sellProfitLoss = (sellPrice - currentSellPrice) * sellShares;
+        // 総損益
+        profitLoss = buyProfitLoss + sellProfitLoss;
+      }
+    }
+
     const updatedPair = await prisma.pair.update({
       where: { id: parseInt(id) },
       data: {
@@ -102,6 +119,11 @@ export async function PUT(
         sellPrice,
         buyStockCode: data.buyStockCode || null,
         sellStockCode: data.sellStockCode || null,
+        currentBuyPrice,
+        currentSellPrice,
+        buyProfitLoss,
+        sellProfitLoss,
+        profitLoss,
       },
     });
     
