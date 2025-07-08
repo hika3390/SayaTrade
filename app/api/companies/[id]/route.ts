@@ -20,6 +20,7 @@ export async function GET(
       where: { id: parseInt(id) },
       include: {
         pairs: true,
+        assets: true,
       },
     });
     

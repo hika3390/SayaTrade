@@ -12,11 +12,27 @@ datasource db {
 }
 
 model Company {
-  id    Int    @id @default(autoincrement())
-  name  String
-  pairs Pair[]
+  id     Int     @id @default(autoincrement())
+  name   String
+  pairs  Pair[]
+  assets Asset[]
 
   @@map("companies")
+}
+
+model Asset {
+  id          Int      @id @default(autoincrement())
+  name        String   // 資産名（例：現金、株式、債券など）
+  type        String   // 資産タイプ（cash, stock, bond, fund など）
+  amount      Float    // 金額または数量
+  unit        String   @default("円") // 単位（円、株、口など）
+  description String?  // 説明・備考
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  companyId   Int
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("assets")
 }
 
 model Pair {

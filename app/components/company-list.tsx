@@ -164,42 +164,64 @@ export function CompanyList({ initialData }: CompanyListProps) {
     }
   };
 
-  // 企業のペア情報を取得
-  const fetchCompanyPairs = async (companyId: number) => {
+  // 企業の詳細情報を取得（ペア情報と預かり資産を含む）
+  const fetchCompanyDetails = async (companyId: number) => {
     try {
-      const response = await fetch(`/api/companies/${companyId}/pairs`);
+      const response = await fetch(`/api/companies/${companyId}`);
       
       if (!response.ok) {
-        throw new Error("ペア情報の取得に失敗しました");
+        throw new Error("企業詳細の取得に失敗しました");
       }
       
-      const pairs = await response.json();
+      const companyData = await response.json();
       
       // ペア情報に決済状態のフィールドを含めて整形
-      const formattedPairs = pairs.map((pair: any) => ({
+      const formattedPairs = companyData.pairs ? companyData.pairs.map((pair: any) => ({
         ...pair,
         isSettled: pair.isSettled || false,
         settledAt: pair.settledAt || undefined
-      }));
+      })) : [];
 
-      // 企業のペア情報を更新（関数型更新を使用）
+      // 預かり資産情報を整形
+      const formattedAssets = companyData.assets ? companyData.assets.map((asset: any) => ({
+        ...asset,
+        description: asset.description || undefined
+      })) : [];
+
+      // 企業の情報を更新（関数型更新を使用）
       setCompanies(prevCompanies =>
-        prevCompanies.map((company) =>
-          company.id === companyId
-            ? { ...company, pairs: formattedPairs }
-            : company
-        )
+        prevCompanies.map((company) => {
+          if (company.id === companyId) {
+            // 既存のtotalProfitLossを保持しつつ、他の情報を更新
+            return {
+              ...companyData,
+              pairs: formattedPairs,
+              assets: formattedAssets,
+              totalProfitLoss: company.totalProfitLoss // 既存の損益合計を保持
+            };
+          }
+          return company;
+        })
       );
       
-      // 選択中の企業のペア情報も更新（関数型更新を使用）
+      // 選択中の企業の情報も更新（関数型更新を使用）
       if (selectedCompany && selectedCompany.id === companyId) {
-        setSelectedCompany(prevSelectedCompany => 
-          prevSelectedCompany ? { ...prevSelectedCompany, pairs: formattedPairs } : null
-        );
+        const currentCompany = companies.find(c => c.id === companyId);
+        setSelectedCompany({
+          ...companyData,
+          pairs: formattedPairs,
+          assets: formattedAssets,
+          totalProfitLoss: currentCompany?.totalProfitLoss // 既存の損益合計を保持
+        });
       }
     } catch (error) {
-      console.error("ペア情報の取得に失敗しました:", error);
+      console.error("企業詳細の取得に失敗しました:", error);
     }
+  };
+
+  // 企業のペア情報を取得（後方互換性のため残す）
+  const fetchCompanyPairs = async (companyId: number) => {
+    await fetchCompanyDetails(companyId);
   };
 
   // 企業の追加
@@ -245,7 +267,12 @@ export function CompanyList({ initialData }: CompanyListProps) {
       setCompanies(prevCompanies =>
         prevCompanies.map((company) =>
           company.id === companyToEdit.id
-            ? { ...updatedCompany, pairs: company.pairs }
+            ? { 
+                ...updatedCompany, 
+                pairs: company.pairs,
+                assets: company.assets,
+                totalProfitLoss: company.totalProfitLoss // 既存の損益合計を保持
+              }
             : company
         )
       );
@@ -423,6 +450,7 @@ export function CompanyList({ initialData }: CompanyListProps) {
   // 企業一覧に戻るハンドラ
   const handleBackToCompanies = () => {
     setSelectedCompany(null);
+    // APIリクエストは送らず、既存の状態を保持
   };
 
   return (
@@ -495,6 +523,7 @@ export function CompanyList({ initialData }: CompanyListProps) {
           onDeletePair={handleDeletePair}
           onSettlePair={handleSettlePair}
           onCalculateProfitLoss={fetchCompanyProfitLossData}
+          onRefresh={() => fetchCompanyDetails(selectedCompany.id)}
         />
       )}
 

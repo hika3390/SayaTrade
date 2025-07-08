@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
     const companies = await prisma.company.findMany({
       include: {
         pairs: true,
+        assets: true,
       },
       skip,
       take: limit,

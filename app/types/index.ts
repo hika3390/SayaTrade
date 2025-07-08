@@ -19,10 +19,23 @@ export interface Pair {
   settledAt?: string;
 }
 
+export interface Asset {
+  id: number;
+  name: string;
+  type: string;
+  amount: number;
+  unit: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+  companyId: number;
+}
+
 export interface Company {
   id: number;
   name: string;
   pairs: Pair[];
+  assets?: Asset[];
   totalProfitLoss?: number;
 }
 
@@ -36,6 +49,14 @@ export interface PairFormData {
   sellPrice: number;
   buyStockCode?: string;
   sellStockCode?: string;
+}
+
+export interface AssetFormData {
+  name: string;
+  type: string;
+  amount: number;
+  unit: string;
+  description?: string;
 }
 
 export interface CompanyFormData {

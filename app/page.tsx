@@ -92,6 +92,17 @@ function CompanyListWrapper() {
               sellProfitLoss: pair.sellProfitLoss, // 売りの損益情報を追加
               isSettled: pair.isSettled || false, // 決済状態を追加
               settledAt: pair.settledAt || undefined // 決済日時を追加
+            })) : [],
+            assets: company.assets ? company.assets.map((asset: any) => ({
+              id: asset.id,
+              name: asset.name,
+              type: asset.type,
+              amount: asset.amount,
+              unit: asset.unit,
+              description: asset.description || undefined,
+              createdAt: asset.createdAt,
+              updatedAt: asset.updatedAt,
+              companyId: asset.companyId
             })) : []
           })),
           pagination: data.pagination
