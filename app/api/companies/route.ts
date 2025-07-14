@@ -24,12 +24,13 @@ export async function GET(request: NextRequest) {
       },
     });
     
-    // 各企業の合計損益を計算
+    // 各企業の合計損益を計算（保有ポジションの含み損益のみ）
     const companiesWithProfitLoss = companies.map(company => {
       let totalProfitLoss = 0;
       
-      // 各ペアの損益を合計
-      company.pairs.forEach(pair => {
+      // 決済済みでないペアの損益のみを合計（保有ポジションの含み損益）
+      const unsettledPairs = company.pairs.filter(pair => !pair.isSettled);
+      unsettledPairs.forEach(pair => {
         if (pair.profitLoss !== null && pair.profitLoss !== undefined) {
           totalProfitLoss += pair.profitLoss;
         }
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       
       return {
         ...company,
-        totalProfitLoss: company.pairs.some(pair => pair.profitLoss !== null && pair.profitLoss !== undefined) 
+        totalProfitLoss: unsettledPairs.some(pair => pair.profitLoss !== null && pair.profitLoss !== undefined) 
           ? totalProfitLoss 
           : undefined
       };

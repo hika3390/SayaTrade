@@ -20,7 +20,7 @@ export function CompanyCard({ company, onShowPairs, onEdit, onDelete }: CompanyC
         </p>
         {company.totalProfitLoss !== undefined && (
           <p className={`text-sm font-medium ${company.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            損益合計: {company.totalProfitLoss.toLocaleString()} 円
+            含み損益: {company.totalProfitLoss.toLocaleString()} 円
           </p>
         )}
       </div>
