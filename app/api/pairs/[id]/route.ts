@@ -107,24 +107,36 @@ export async function PUT(
       }
     }
 
+    // データオブジェクトを構築
+    const updateData: any = {
+      name: data.name,
+      link: data.link || null,
+      analysisRecord: data.analysisRecord || null,
+      buyShares,
+      sellShares,
+      buyPrice,
+      sellPrice,
+      buyStockCode: data.buyStockCode || null,
+      sellStockCode: data.sellStockCode || null,
+      currentBuyPrice,
+      currentSellPrice,
+      buyProfitLoss,
+      sellProfitLoss,
+      profitLoss,
+    };
+
+    // entryDateが提供されている場合のみ追加
+    if (data.entryDate) {
+      try {
+        updateData.entryDate = new Date(data.entryDate);
+      } catch (error) {
+        console.warn('Invalid entryDate format:', data.entryDate);
+      }
+    }
+
     const updatedPair = await prisma.pair.update({
       where: { id: parseInt(id) },
-      data: {
-        name: data.name,
-        link: data.link || null,
-        analysisRecord: data.analysisRecord || null,
-        buyShares,
-        sellShares,
-        buyPrice,
-        sellPrice,
-        buyStockCode: data.buyStockCode || null,
-        sellStockCode: data.sellStockCode || null,
-        currentBuyPrice,
-        currentSellPrice,
-        buyProfitLoss,
-        sellProfitLoss,
-        profitLoss,
-      },
+      data: updateData,
     });
     
     return NextResponse.json(updatedPair);

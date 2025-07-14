@@ -15,6 +15,7 @@ export interface Pair {
   profitLoss?: number;
   buyProfitLoss?: number;
   sellProfitLoss?: number;
+  entryDate?: string;
   isSettled?: boolean;
   settledAt?: string;
 }
@@ -49,6 +50,7 @@ export interface PairFormData {
   sellPrice: number;
   buyStockCode?: string;
   sellStockCode?: string;
+  entryDate?: string;
 }
 
 export interface AssetFormData {

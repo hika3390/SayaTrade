@@ -90,6 +90,7 @@ function CompanyListWrapper() {
               profitLoss: pair.profitLoss, // 損益情報を追加
               buyProfitLoss: pair.buyProfitLoss, // 買いの損益情報を追加
               sellProfitLoss: pair.sellProfitLoss, // 売りの損益情報を追加
+              entryDate: pair.entryDate || undefined, // エントリー日を追加
               isSettled: pair.isSettled || false, // 決済状態を追加
               settledAt: pair.settledAt || undefined // 決済日時を追加
             })) : [],

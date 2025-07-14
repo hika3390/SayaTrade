@@ -92,19 +92,31 @@ export async function POST(
       );
     }
     
+    // データオブジェクトを構築
+    const createData: any = {
+      name: data.name,
+      link: data.link || null,
+      analysisRecord: data.analysisRecord || null,
+      buyShares,
+      sellShares,
+      buyPrice,
+      sellPrice,
+      buyStockCode: data.buyStockCode || null,
+      sellStockCode: data.sellStockCode || null,
+      companyId: parseInt(id),
+    };
+
+    // entryDateが提供されている場合のみ追加
+    if (data.entryDate) {
+      try {
+        createData.entryDate = new Date(data.entryDate);
+      } catch (error) {
+        console.warn('Invalid entryDate format:', data.entryDate);
+      }
+    }
+
     const pair = await prisma.pair.create({
-      data: {
-        name: data.name,
-        link: data.link || null,
-        analysisRecord: data.analysisRecord || null,
-        buyShares,
-        sellShares,
-        buyPrice,
-        sellPrice,
-        buyStockCode: data.buyStockCode || null,
-        sellStockCode: data.sellStockCode || null,
-        companyId: parseInt(id),
-      },
+      data: createData,
     });
     
     return NextResponse.json(pair, { status: 201 });

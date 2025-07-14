@@ -25,6 +25,7 @@ interface PairFormProps {
     sellPrice: number;
     buyStockCode?: string;
     sellStockCode?: string;
+    entryDate?: string;
   }) => void;
   initialData?: {
     id: number;
@@ -37,6 +38,7 @@ interface PairFormProps {
     sellPrice: number;
     buyStockCode?: string;
     sellStockCode?: string;
+    entryDate?: string;
   };
   title: string;
 }
@@ -57,6 +59,13 @@ export function PairForm({
   const [sellPrice, setSellPrice] = useState(initialData?.sellPrice || 0);
   const [buyStockCode, setBuyStockCode] = useState(initialData?.buyStockCode || "");
   const [sellStockCode, setSellStockCode] = useState(initialData?.sellStockCode || "");
+  const [entryDate, setEntryDate] = useState(() => {
+    if (initialData?.entryDate) {
+      // ISO文字列をYYYY-MM-DD形式に変換
+      return new Date(initialData.entryDate).toISOString().split('T')[0];
+    }
+    return "";
+  });
   
   // initialDataが変更されたときに状態を更新
   useEffect(() => {
@@ -70,6 +79,12 @@ export function PairForm({
       setSellPrice(initialData.sellPrice);
       setBuyStockCode(initialData.buyStockCode || "");
       setSellStockCode(initialData.sellStockCode || "");
+      // エントリー日の処理を修正
+      if (initialData.entryDate) {
+        setEntryDate(new Date(initialData.entryDate).toISOString().split('T')[0]);
+      } else {
+        setEntryDate("");
+      }
     }
   }, [initialData]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,6 +104,7 @@ export function PairForm({
         sellPrice: Number(sellPrice),
         buyStockCode: buyStockCode || undefined,
         sellStockCode: sellStockCode || undefined,
+        entryDate: entryDate || undefined,
       });
       onClose();
     } catch (error) {
@@ -218,6 +234,18 @@ export function PairForm({
                 onChange={(e) => setSellStockCode(e.target.value)}
                 className="col-span-3"
                 placeholder="例: 5678"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="entryDate" className="text-right">
+                エントリー日
+              </Label>
+              <Input
+                id="entryDate"
+                type="date"
+                value={entryDate}
+                onChange={(e) => setEntryDate(e.target.value)}
+                className="col-span-3"
               />
             </div>
           </div>

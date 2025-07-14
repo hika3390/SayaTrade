@@ -23,6 +23,7 @@ export function PairTable({ pairs, title, isSettled = false, onEdit, onDelete, o
               <th className="border p-2 text-left">ペア名</th>
               <th className="border p-2 text-left">リンク</th>
               <th className="border p-2 text-left">分析記録</th>
+              <th className="border p-2 text-center">エントリー日</th>
               <th className="border p-2 text-right">買い株数</th>
               <th className="border p-2 text-right">売り株数</th>
               <th className="border p-2 text-right">買い単価</th>
@@ -74,6 +75,9 @@ export function PairTable({ pairs, title, isSettled = false, onEdit, onDelete, o
                     ) : (
                       "-"
                     )}
+                  </td>
+                  <td className="border p-2 text-center">
+                    {pair.entryDate ? new Date(pair.entryDate).toLocaleDateString('ja-JP') : "-"}
                   </td>
                   <td className="border p-2 text-right">{pair.buyShares}</td>
                   <td className="border p-2 text-right">{pair.sellShares}</td>
@@ -158,7 +162,7 @@ export function PairTable({ pairs, title, isSettled = false, onEdit, onDelete, o
               ))
             ) : (
               <tr>
-                <td colSpan={isSettled ? 16 : 15} className="border p-4 text-center text-gray-500">
+                <td colSpan={isSettled ? 17 : 16} className="border p-4 text-center text-gray-500">
                   {isSettled ? "決済済みペアはありません" : "未決済ペアはありません"}
                 </td>
               </tr>

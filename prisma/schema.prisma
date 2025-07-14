@@ -51,6 +51,7 @@ model Pair {
   profitLoss      Float?
   buyProfitLoss   Float?
   sellProfitLoss  Float?
+  entryDate       DateTime? // エントリー日
   updatedAt       DateTime?
   isSettled       Boolean   @default(false)
   settledAt       DateTime?
