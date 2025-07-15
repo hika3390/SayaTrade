@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { CompanyList } from "@/app/components/company-list";
 import { DuplicatePairsView } from "@/app/components/duplicate-pairs-view";
 import { TradingHistory } from "@/app/components/trading-history";
+import { LoadingSpinner } from "@/app/components/loading-spinner";
 import { CompaniesResponse } from "@/app/types";
 
 // 画面の種類を定義
@@ -195,7 +196,15 @@ function CompanyListWrapper() {
   }, []);
 
   if (isLoading) {
-    return <div className="container mx-auto py-8 text-center">データを読み込み中...</div>;
+    return (
+      <div className="container mx-auto py-8">
+        <LoadingSpinner 
+          size="lg" 
+          message="企業データを読み込み中..." 
+          className="py-16"
+        />
+      </div>
+    );
   }
 
   if (error) {

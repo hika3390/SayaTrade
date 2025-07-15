@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
 import { PairFilter } from "@/app/components/pair-filter";
 import { usePairFilter } from "@/app/hooks/use-pair-filter";
+import { LoadingSpinner } from "@/app/components/loading-spinner";
 import { Company, Pair } from "@/app/types";
 
 interface TradingHistoryProps {
@@ -94,7 +95,11 @@ export function TradingHistory({ onBack }: TradingHistoryProps) {
   if (isLoading) {
     return (
       <div className="py-8">
-        <div className="text-center">取引履歴を読み込み中...</div>
+        <LoadingSpinner 
+          size="lg" 
+          message="取引履歴を読み込み中..." 
+          className="py-16"
+        />
       </div>
     );
   }

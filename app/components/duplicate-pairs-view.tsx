@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
+import { LoadingSpinner, LoadingDots } from "@/app/components/loading-spinner";
 
 interface Company {
   id: number;
@@ -161,6 +162,9 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
+              {isCalculating && (
+                <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mr-1"></div>
+              )}
               <span>{isCalculating ? "計算中..." : "全体の損益計算"}</span>
             </Button>
           </div>
@@ -170,9 +174,11 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
       {/* メインコンテンツ */}
       <div className="space-y-8">
         {isLoading ? (
-          <div className="text-center py-8">
-            <p>データを読み込み中...</p>
-          </div>
+          <LoadingSpinner 
+            size="lg" 
+            message="重複ペアデータを読み込み中..." 
+            className="py-16"
+          />
         ) : error ? (
           <div className="text-center py-8 text-red-500">
             <p>{error}</p>
