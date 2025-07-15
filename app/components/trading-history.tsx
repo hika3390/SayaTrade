@@ -111,11 +111,32 @@ export function TradingHistory({ onBack }: TradingHistoryProps) {
     <div className="mx-auto p-4">
       {/* ヘッダー */}
       <div className="bg-gray-100 p-4 mb-6 rounded-lg">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">全企業取引履歴</h1>
-          <Button variant="outline" onClick={clearFilters}>
-            フィルタークリア
-          </Button>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div className="flex items-center space-x-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <svg className="h-5 w-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">全企業取引履歴</h1>
+              <p className="text-muted-foreground">
+                全企業の取引ペアを一覧で確認し、フィルタリングできます
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={clearFilters}
+              className="flex items-center space-x-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.207A1 1 0 013 6.5V4z" />
+              </svg>
+              <span>フィルタークリア</span>
+            </Button>
+          </div>
         </div>
         
         {/* フィルター */}
