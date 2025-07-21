@@ -119,12 +119,14 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
     
     // 重複ペアグループの損益を合計
     duplicatePairGroups.forEach(group => {
-      total += group.totalProfitLoss;
+      if (group.totalProfitLoss !== null && group.totalProfitLoss !== undefined && !isNaN(group.totalProfitLoss)) {
+        total += group.totalProfitLoss;
+      }
     });
     
     // ユニークなペアの損益を合計
     uniquePairs.forEach(pair => {
-      if (pair.profitLoss !== undefined) {
+      if (pair.profitLoss !== null && pair.profitLoss !== undefined && !isNaN(pair.profitLoss)) {
         total += pair.profitLoss;
       }
     });
@@ -192,7 +194,7 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
             <div className="bg-white p-4 rounded-lg shadow">
               <h2 className="text-xl font-semibold mb-2">全体の損益</h2>
               <p className={`text-2xl font-bold ${totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {totalProfitLoss.toLocaleString()} 円
+                {(totalProfitLoss || 0).toLocaleString()} 円
               </p>
             </div>
 
@@ -208,8 +210,8 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
                           <h3 className="text-lg font-medium">
                             証券コード: {group.stockCodes.buyStockCode} / {group.stockCodes.sellStockCode}
                           </h3>
-                          <p className={`text-lg font-semibold ${group.totalProfitLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            グループ合計損益: {group.totalProfitLoss.toLocaleString()} 円
+                          <p className={`text-lg font-semibold ${(group.totalProfitLoss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            グループ合計損益: {(group.totalProfitLoss || 0).toLocaleString()} 円
                           </p>
                         </div>
                         <div className="text-sm text-gray-500">
@@ -262,8 +264,8 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
                                 <td className="border p-2 text-right">{pair.sellPrice}</td>
                                 <td className="border p-2 text-right">{pair.currentBuyPrice?.toLocaleString() || "-"}</td>
                                 <td className="border p-2 text-right">{pair.currentSellPrice?.toLocaleString() || "-"}</td>
-                                <td className={`border p-2 text-right ${pair.profitLoss !== undefined ? (pair.profitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
-                                  {pair.profitLoss !== undefined ? `${pair.profitLoss.toLocaleString()} 円` : "-"}
+                                <td className={`border p-2 text-right ${pair.profitLoss !== undefined && pair.profitLoss !== null ? (pair.profitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
+                                  {pair.profitLoss !== undefined && pair.profitLoss !== null ? `${pair.profitLoss.toLocaleString()} 円` : "-"}
                                 </td>
                               </tr>
                             ))}
@@ -329,8 +331,8 @@ export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
                           <td className="border p-2 text-right">{pair.sellPrice}</td>
                           <td className="border p-2 text-right">{pair.currentBuyPrice?.toLocaleString() || "-"}</td>
                           <td className="border p-2 text-right">{pair.currentSellPrice?.toLocaleString() || "-"}</td>
-                          <td className={`border p-2 text-right ${pair.profitLoss !== undefined ? (pair.profitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
-                            {pair.profitLoss !== undefined ? `${pair.profitLoss.toLocaleString()} 円` : "-"}
+                          <td className={`border p-2 text-right ${pair.profitLoss !== undefined && pair.profitLoss !== null ? (pair.profitLoss >= 0 ? 'text-green-600' : 'text-red-600') : ''}`}>
+                            {pair.profitLoss !== undefined && pair.profitLoss !== null ? `${pair.profitLoss.toLocaleString()} 円` : "-"}
                           </td>
                         </tr>
                       ))}
