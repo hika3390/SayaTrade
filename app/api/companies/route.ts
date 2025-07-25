@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import { validateCompanyData } from '@/app/lib/api-validation';
+import { createErrorResponse, createValidationErrorResponse } from '@/app/lib/api-errors';
+import { createPaginationInfo } from '@/app/lib/api-helpers';
 
 // 企業一覧を取得
 export async function GET(request: NextRequest) {
@@ -44,25 +47,12 @@ export async function GET(request: NextRequest) {
       };
     });
     
-    const totalPages = Math.ceil(totalCount / limit);
-    
     return NextResponse.json({
       companies: companiesWithProfitLoss,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalCount,
-        limit,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-      },
+      pagination: createPaginationInfo(page, limit, totalCount),
     });
   } catch (error) {
-    console.error('企業一覧の取得に失敗しました:', error);
-    return NextResponse.json(
-      { error: '企業一覧の取得に失敗しました' },
-      { status: 500 }
-    );
+    return createErrorResponse('企業一覧の取得に失敗しました');
   }
 }
 
@@ -72,11 +62,9 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     
     // バリデーション
-    if (!data.name) {
-      return NextResponse.json(
-        { error: '企業名は必須です' },
-        { status: 400 }
-      );
+    const validation = validateCompanyData(data);
+    if (!validation.isValid) {
+      return createValidationErrorResponse(validation.error!);
     }
     
     const company = await prisma.company.create({
@@ -87,10 +75,6 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json(company, { status: 201 });
   } catch (error) {
-    console.error('企業の追加に失敗しました:', error);
-    return NextResponse.json(
-      { error: '企業の追加に失敗しました' },
-      { status: 500 }
-    );
+    return createErrorResponse('企業の追加に失敗しました');
   }
 }

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import { validateId, validatePairData, parseDate } from '@/app/lib/api-validation';
+import { findCompanyById } from '@/app/lib/api-database';
+import { createErrorResponse, createNotFoundResponse, createValidationErrorResponse } from '@/app/lib/api-errors';
 
 // 特定の企業のペア情報を取得
 export async function GET(
@@ -9,23 +12,16 @@ export async function GET(
   try {
     const { id } = await params;
     
-    if (isNaN(parseInt(id))) {
-      return NextResponse.json(
-        { error: '無効な企業IDです' },
-        { status: 400 }
-      );
+    const validation = validateId(id);
+    if (!validation.isValid) {
+      return createValidationErrorResponse(validation.error!);
     }
     
     // 企業の存在確認
-    const company = await prisma.company.findUnique({
-      where: { id: parseInt(id) },
-    });
+    const company = await findCompanyById(parseInt(id));
     
     if (!company) {
-      return NextResponse.json(
-        { error: '企業が見つかりません' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('企業');
     }
     
     const pairs = await prisma.pair.findMany({
@@ -34,11 +30,7 @@ export async function GET(
     
     return NextResponse.json(pairs);
   } catch (error) {
-    console.error('ペア情報の取得に失敗しました:', error);
-    return NextResponse.json(
-      { error: 'ペア情報の取得に失敗しました' },
-      { status: 500 }
-    );
+    return createErrorResponse('ペア情報の取得に失敗しました');
   }
 }
 
@@ -50,47 +42,31 @@ export async function POST(
   try {
     const { id } = await params;
     
-    if (isNaN(parseInt(id))) {
-      return NextResponse.json(
-        { error: '無効な企業IDです' },
-        { status: 400 }
-      );
+    const validation = validateId(id);
+    if (!validation.isValid) {
+      return createValidationErrorResponse(validation.error!);
     }
     
     // 企業の存在確認
-    const company = await prisma.company.findUnique({
-      where: { id: parseInt(id) },
-    });
+    const company = await findCompanyById(parseInt(id));
     
     if (!company) {
-      return NextResponse.json(
-        { error: '企業が見つかりません' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('企業');
     }
     
     const data = await request.json();
     
     // バリデーション
-    if (!data.name) {
-      return NextResponse.json(
-        { error: 'ペア名は必須です' },
-        { status: 400 }
-      );
+    const dataValidation = validatePairData(data);
+    if (!dataValidation.isValid) {
+      return createValidationErrorResponse(dataValidation.error!);
     }
     
-    // 数値フィールドのバリデーション
+    // 数値フィールドの取得
     const buyShares = parseInt(data.buyShares);
     const sellShares = parseInt(data.sellShares);
     const buyPrice = parseFloat(data.buyPrice);
     const sellPrice = parseFloat(data.sellPrice);
-    
-    if (isNaN(buyShares) || isNaN(sellShares) || isNaN(buyPrice) || isNaN(sellPrice)) {
-      return NextResponse.json(
-        { error: '株数と単価は数値で入力してください' },
-        { status: 400 }
-      );
-    }
     
     // データオブジェクトを構築
     const createData: any = {
@@ -108,10 +84,9 @@ export async function POST(
 
     // entryDateが提供されている場合のみ追加
     if (data.entryDate) {
-      try {
-        createData.entryDate = new Date(data.entryDate);
-      } catch (error) {
-        console.warn('Invalid entryDate format:', data.entryDate);
+      const parsedDate = parseDate(data.entryDate);
+      if (parsedDate) {
+        createData.entryDate = parsedDate;
       }
     }
 
@@ -121,10 +96,6 @@ export async function POST(
     
     return NextResponse.json(pair, { status: 201 });
   } catch (error) {
-    console.error('ペア情報の追加に失敗しました:', error);
-    return NextResponse.json(
-      { error: 'ペア情報の追加に失敗しました' },
-      { status: 500 }
-    );
+    return createErrorResponse('ペア情報の追加に失敗しました');
   }
 }

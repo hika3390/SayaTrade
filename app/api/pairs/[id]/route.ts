@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import { validateId, validatePairData, parseDate } from '@/app/lib/api-validation';
+import { findPairById } from '@/app/lib/api-database';
+import { createErrorResponse, createNotFoundResponse, createValidationErrorResponse } from '@/app/lib/api-errors';
 
 // 特定のペア情報を取得
 export async function GET(
@@ -9,34 +12,20 @@ export async function GET(
   try {
     const { id } = await params;
     
-    if (isNaN(parseInt(id))) {
-      return NextResponse.json(
-        { error: '無効なIDです' },
-        { status: 400 }
-      );
+    const validation = validateId(id);
+    if (!validation.isValid) {
+      return createValidationErrorResponse(validation.error!);
     }
     
-    const pair = await prisma.pair.findUnique({
-      where: { id: parseInt(id) },
-      include: {
-        company: true,
-      },
-    });
+    const pair = await findPairById(parseInt(id));
     
     if (!pair) {
-      return NextResponse.json(
-        { error: 'ペア情報が見つかりません' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('ペア情報');
     }
     
     return NextResponse.json(pair);
   } catch (error) {
-    console.error('ペア情報の取得に失敗しました:', error);
-    return NextResponse.json(
-      { error: 'ペア情報の取得に失敗しました' },
-      { status: 500 }
-    );
+    return createErrorResponse('ペア情報の取得に失敗しました');
   }
 }
 
@@ -48,47 +37,31 @@ export async function PUT(
   try {
     const { id } = await params;
     
-    if (isNaN(parseInt(id))) {
-      return NextResponse.json(
-        { error: '無効なIDです' },
-        { status: 400 }
-      );
+    const validation = validateId(id);
+    if (!validation.isValid) {
+      return createValidationErrorResponse(validation.error!);
     }
     
     // ペア情報の存在確認
-    const existingPair = await prisma.pair.findUnique({
-      where: { id: parseInt(id) },
-    });
+    const existingPair = await findPairById(parseInt(id));
     
     if (!existingPair) {
-      return NextResponse.json(
-        { error: 'ペア情報が見つかりません' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('ペア情報');
     }
     
     const data = await request.json();
     
     // バリデーション
-    if (!data.name) {
-      return NextResponse.json(
-        { error: 'ペア名は必須です' },
-        { status: 400 }
-      );
+    const dataValidation = validatePairData(data);
+    if (!dataValidation.isValid) {
+      return createValidationErrorResponse(dataValidation.error!);
     }
     
-    // 数値フィールドのバリデーション
+    // 数値フィールドの取得
     const buyShares = parseInt(data.buyShares);
     const sellShares = parseInt(data.sellShares);
     const buyPrice = parseFloat(data.buyPrice);
     const sellPrice = parseFloat(data.sellPrice);
-    
-    if (isNaN(buyShares) || isNaN(sellShares) || isNaN(buyPrice) || isNaN(sellPrice)) {
-      return NextResponse.json(
-        { error: '株数と単価は数値で入力してください' },
-        { status: 400 }
-      );
-    }
     
     const currentBuyPrice = data.currentBuyPrice ? parseFloat(data.currentBuyPrice) : existingPair.currentBuyPrice;
     const currentSellPrice = data.currentSellPrice ? parseFloat(data.currentSellPrice) : existingPair.currentSellPrice;
@@ -127,10 +100,9 @@ export async function PUT(
 
     // entryDateが提供されている場合のみ追加
     if (data.entryDate) {
-      try {
-        updateData.entryDate = new Date(data.entryDate);
-      } catch (error) {
-        console.warn('Invalid entryDate format:', data.entryDate);
+      const parsedDate = parseDate(data.entryDate);
+      if (parsedDate) {
+        updateData.entryDate = parsedDate;
       }
     }
 
@@ -141,11 +113,7 @@ export async function PUT(
     
     return NextResponse.json(updatedPair);
   } catch (error) {
-    console.error('ペア情報の更新に失敗しました:', error);
-    return NextResponse.json(
-      { error: 'ペア情報の更新に失敗しました' },
-      { status: 500 }
-    );
+    return createErrorResponse('ペア情報の更新に失敗しました');
   }
 }
 
@@ -157,23 +125,16 @@ export async function DELETE(
   try {
     const { id } = await params;
     
-    if (isNaN(parseInt(id))) {
-      return NextResponse.json(
-        { error: '無効なIDです' },
-        { status: 400 }
-      );
+    const validation = validateId(id);
+    if (!validation.isValid) {
+      return createValidationErrorResponse(validation.error!);
     }
     
     // ペア情報の存在確認
-    const existingPair = await prisma.pair.findUnique({
-      where: { id: parseInt(id) },
-    });
+    const existingPair = await findPairById(parseInt(id));
     
     if (!existingPair) {
-      return NextResponse.json(
-        { error: 'ペア情報が見つかりません' },
-        { status: 404 }
-      );
+      return createNotFoundResponse('ペア情報');
     }
     
     await prisma.pair.delete({
@@ -182,10 +143,6 @@ export async function DELETE(
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('ペア情報の削除に失敗しました:', error);
-    return NextResponse.json(
-      { error: 'ペア情報の削除に失敗しました' },
-      { status: 500 }
-    );
+    return createErrorResponse('ペア情報の削除に失敗しました');
   }
 }

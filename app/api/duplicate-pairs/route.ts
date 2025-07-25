@@ -1,26 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
-import { fetchStockPrice } from '@/app/lib/stock-price-utils';
-
-interface PairWithPrices {
-  id: number;
-  name: string;
-  link?: string | null;
-  buyShares: number;
-  sellShares: number;
-  buyPrice: number;
-  sellPrice: number;
-  buyStockCode?: string | null;
-  sellStockCode?: string | null;
-  companyId: number;
-  company: {
-    id: number;
-    name: string;
-  };
-  currentBuyPrice?: number;
-  currentSellPrice?: number;
-  profitLoss?: number;
-}
+import { PairWithPrices } from '@/app/lib/api-types';
+import { calculatePairTradeProfitLossWithPrices } from '@/app/lib/api-profit-loss';
+import { createErrorResponse } from '@/app/lib/api-errors';
 
 interface DuplicatePairGroup {
   stockCodes: {
@@ -29,29 +11,6 @@ interface DuplicatePairGroup {
   };
   pairs: PairWithPrices[];
   totalProfitLoss: number;
-}
-
-// 損益を計算する関数
-function calculateProfitLoss(
-  buyShares: number,
-  buyPrice: number,
-  currentBuyPrice: number,
-  sellShares: number,
-  sellPrice: number,
-  currentSellPrice: number
-): number {
-  // 買いポジションの損益: (買い株数 * 買い単価) - (買い株数 * 現在の単価)
-  const buyPositionPL = (buyShares * buyPrice) - (buyShares * currentBuyPrice);
-  
-  // 売りポジションの損益: (売り株数 * 売り単価) - (売り株数 * 現在の単価)
-  const sellPositionPL = (sellShares * sellPrice) - (sellShares * currentSellPrice);
-  
-  // 合計損益: 絶対値が大きい方から小さい方を引く
-  if (Math.abs(buyPositionPL) >= Math.abs(sellPositionPL)) {
-    return buyPositionPL - sellPositionPL;
-  } else {
-    return sellPositionPL - buyPositionPL;
-  }
 }
 
 // 重複するペアとユニークなペアを取得するAPI
@@ -109,29 +68,16 @@ export async function GET() {
             totalProfitLoss += pair.profitLoss;
           } 
           // 損益情報がない場合は計算して一時的に設定（データベースには保存しない）
-          else if (pair.buyStockCode && pair.sellStockCode) {
-            // 現在の株価を取得
-            const currentBuyPrice = await fetchStockPrice(pair.buyStockCode);
-            const currentSellPrice = await fetchStockPrice(pair.sellStockCode);
-            
-            // 両方の株価が取得できた場合のみ損益を計算
-            if (currentBuyPrice !== null && currentSellPrice !== null) {
-              const profitLoss = calculateProfitLoss(
-                pair.buyShares,
-                pair.buyPrice,
-                currentBuyPrice,
-                pair.sellShares,
-                pair.sellPrice,
-                currentSellPrice
-              );
-              
+          else {
+            const updatedPair = await calculatePairTradeProfitLossWithPrices(pair);
+            if (updatedPair && updatedPair.profitLoss !== undefined) {
               // ペアの損益を設定
-              pair.currentBuyPrice = currentBuyPrice;
-              pair.currentSellPrice = currentSellPrice;
-              pair.profitLoss = profitLoss;
+              pair.currentBuyPrice = updatedPair.currentBuyPrice;
+              pair.currentSellPrice = updatedPair.currentSellPrice;
+              pair.profitLoss = updatedPair.profitLoss;
               
               // グループの合計損益に加算
-              totalProfitLoss += profitLoss;
+              totalProfitLoss += updatedPair.profitLoss;
             }
           }
         }
@@ -156,26 +102,13 @@ export async function GET() {
           uniquePairs.push(pair);
         }
         // 損益情報がない場合は計算して一時的に設定（データベースには保存しない）
-        else if (pair.buyStockCode && pair.sellStockCode) {
-          // 現在の株価を取得
-          const currentBuyPrice = await fetchStockPrice(pair.buyStockCode);
-          const currentSellPrice = await fetchStockPrice(pair.sellStockCode);
-          
-          // 両方の株価が取得できた場合のみ損益を計算
-          if (currentBuyPrice !== null && currentSellPrice !== null) {
-            const profitLoss = calculateProfitLoss(
-              pair.buyShares,
-              pair.buyPrice,
-              currentBuyPrice,
-              pair.sellShares,
-              pair.sellPrice,
-              currentSellPrice
-            );
-            
+        else {
+          const updatedPair = await calculatePairTradeProfitLossWithPrices(pair);
+          if (updatedPair && updatedPair.profitLoss !== undefined) {
             // ペアの損益を設定
-            pair.currentBuyPrice = currentBuyPrice;
-            pair.currentSellPrice = currentSellPrice;
-            pair.profitLoss = profitLoss;
+            pair.currentBuyPrice = updatedPair.currentBuyPrice;
+            pair.currentSellPrice = updatedPair.currentSellPrice;
+            pair.profitLoss = updatedPair.profitLoss;
             
             uniquePairs.push(pair);
           }
@@ -189,10 +122,6 @@ export async function GET() {
       uniquePairs,
     });
   } catch (error) {
-    console.error('重複ペアの取得に失敗しました:', error);
-    return NextResponse.json(
-      { error: '重複ペアの取得に失敗しました' },
-      { status: 500 }
-    );
+    return createErrorResponse('重複ペアの取得に失敗しました');
   }
 }
