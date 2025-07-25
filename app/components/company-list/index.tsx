@@ -1,20 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CompanyForm } from "@/app/components/company-form";
 import { PairForm } from "@/app/components/pair-form";
 import { SettledPairForm } from "@/app/components/settled-pair-form";
 import { CompanyDetail } from "@/app/components/company-detail";
 import { CompanyListView } from "./company-list-view";
+import { LoadingSpinner } from "@/app/components/loading-spinner";
 import { Company, Pair, PairFormData, CompanyFormData, CompaniesResponse, PaginationInfo } from "@/app/types";
 
 interface CompanyListProps {
-  initialData: CompaniesResponse;
+  initialData?: CompaniesResponse;
 }
 
 export function CompanyList({ initialData }: CompanyListProps) {
-  const [companies, setCompanies] = useState<Company[]>(initialData.companies);
-  const [pagination, setPagination] = useState<PaginationInfo>(initialData.pagination);
+  const [companies, setCompanies] = useState<Company[]>(initialData?.companies || []);
+  const [pagination, setPagination] = useState<PaginationInfo>(initialData?.pagination || {
+    currentPage: 1,
+    totalPages: 1,
+    totalCount: 0,
+    limit: 5,
+    hasNext: false,
+    hasPrev: false
+  });
+  const [isInitialLoading, setIsInitialLoading] = useState(!initialData);
+  const [error, setError] = useState<string | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
   const [isAddCompanyOpen, setIsAddCompanyOpen] = useState(false);
@@ -26,9 +36,15 @@ export function CompanyList({ initialData }: CompanyListProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   // 企業一覧を取得する関数
-  const fetchCompanies = async (page: number = 1, limit: number = 5) => {
+  const fetchCompanies = async (page: number = 1, limit: number = 5, isInitial: boolean = false) => {
     try {
-      const response = await fetch(`/api/companies?page=${page}&limit=${limit}`);
+      if (isInitial) {
+        setIsInitialLoading(true);
+        setError(null);
+      }
+      
+      const cacheOption = isInitial ? { cache: 'no-store' as RequestCache } : {};
+      const response = await fetch(`/api/companies?page=${page}&limit=${limit}`, cacheOption);
       
       if (!response.ok) {
         throw new Error("企業一覧の取得に失敗しました");
@@ -37,10 +53,25 @@ export function CompanyList({ initialData }: CompanyListProps) {
       const data: CompaniesResponse = await response.json();
       setCompanies(data.companies);
       setPagination(data.pagination);
-    } catch (error) {
-      console.error("企業一覧の取得に失敗しました:", error);
+    } catch (err: unknown) {
+      if (isInitial) {
+        setError(err instanceof Error ? err.message : '不明なエラーが発生しました');
+      } else {
+        console.error("企業一覧の取得に失敗しました:", err);
+      }
+    } finally {
+      if (isInitial) {
+        setIsInitialLoading(false);
+      }
     }
   };
+
+  // 初期データがない場合のみ、データを取得
+  useEffect(() => {
+    if (!initialData) {
+      fetchCompanies(1, 5, true);
+    }
+  }, [initialData]);
 
   // ページ変更ハンドラ
   const handlePageChange = (page: number) => {
@@ -452,9 +483,17 @@ export function CompanyList({ initialData }: CompanyListProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 py-6 space-y-6">
       {/* メインコンテンツ */}
-      {!selectedCompany ? (
+      {isInitialLoading ? (
+        <LoadingSpinner 
+          size="lg" 
+          message="企業データを読み込み中..." 
+          className="py-16"
+        />
+      ) : error ? (
+        <div className="text-center py-8 text-red-500">エラー: {error}</div>
+      ) : !selectedCompany ? (
         <CompanyListView
           companies={companies}
           pagination={pagination}
