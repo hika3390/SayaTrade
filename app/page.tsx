@@ -12,7 +12,7 @@ export default function Home() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="flex items-center justify-center min-h-[50vh]">
       <div className="text-center">
         <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center mx-auto mb-4">
           <span className="text-primary-foreground font-bold text-sm">S</span>

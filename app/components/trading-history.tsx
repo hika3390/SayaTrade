@@ -109,7 +109,7 @@ export function TradingHistory() {
   }
 
   return (
-    <div className="px-4 py-6">
+    <div>
       {/* ヘッダー */}
       <div className="bg-gray-100 p-4 mb-6 rounded-lg">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
