@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/app/components/ui/button";
-import { LoadingSpinner, LoadingDots } from "@/app/components/loading-spinner";
+import { LoadingSpinner } from "@/app/components/loading-spinner";
 
 interface Company {
   id: number;
@@ -36,11 +36,7 @@ interface DuplicatePairGroup {
   totalProfitLoss: number;
 }
 
-interface DuplicatePairsViewProps {
-  onBack?: () => void;
-}
-
-export function DuplicatePairsView({ onBack }: DuplicatePairsViewProps) {
+export function DuplicatePairsView() {
   const [duplicatePairGroups, setDuplicatePairGroups] = useState<DuplicatePairGroup[]>([]);
   const [uniquePairs, setUniquePairs] = useState<Pair[]>([]);
   const [isLoading, setIsLoading] = useState(true);

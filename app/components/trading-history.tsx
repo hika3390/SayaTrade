@@ -7,11 +7,7 @@ import { usePairFilter } from "@/app/hooks/use-pair-filter";
 import { LoadingSpinner } from "@/app/components/loading-spinner";
 import { Company, Pair } from "@/app/types";
 
-interface TradingHistoryProps {
-  onBack: () => void;
-}
-
-export function TradingHistory({ onBack }: TradingHistoryProps) {
+export function TradingHistory() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
