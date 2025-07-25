@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 
 // 画面の種類を定義
-type ViewType = 'companies' | 'duplicatePairs' | 'tradingHistory';
+type ViewType = 'dashboard' | 'companies' | 'duplicatePairs' | 'tradingHistory';
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -13,14 +13,26 @@ export function Navigation() {
 
   // 現在のパスから現在のビューを判定
   const getCurrentView = (): ViewType => {
+    if (pathname === '/') return 'dashboard';
     if (pathname.includes('/duplicate-pairs')) return 'duplicatePairs';
     if (pathname.includes('/trading-history')) return 'tradingHistory';
-    return 'companies';
+    if (pathname.includes('/companies')) return 'companies';
+    return 'dashboard';
   };
 
   const currentView = getCurrentView();
 
   const navigationItems = [
+    {
+      key: 'dashboard' as ViewType,
+      label: 'ダッシュボード',
+      path: '/',
+      icon: (
+        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      )
+    },
     {
       key: 'companies' as ViewType,
       label: '企業一覧',
