@@ -1,15 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useAuth } from "@/app/contexts/auth-context";
+import { AuthModal } from "@/app/components/auth/auth-modal";
+import { Button } from "@/app/components/ui/button";
 
 // 画面の種類を定義
 type ViewType = 'dashboard' | 'companies' | 'duplicatePairs' | 'tradingHistory';
 
 export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const { user, loading, logout } = useAuth();
+
+  // 外部クリック検知でユーザーメニューを閉じる
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    if (userMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [userMenuOpen]);
 
   // 現在のパスから現在のビューを判定
   const getCurrentView = (): ViewType => {
@@ -70,6 +93,11 @@ export function Navigation() {
     setIsMobileMenuOpen(false);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    setUserMenuOpen(false);
+  };
+
   return (
     <nav className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
       <div className="w-full px-4">
@@ -83,18 +111,75 @@ export function Navigation() {
             </div>
           </div>
           
-          {/* デスクトップナビゲーション */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navigationItems.map((item) => (
-              <button 
-                key={item.key}
-                className={`nav-item ${currentView === item.key ? 'nav-item-active' : ''}`}
-                onClick={() => handleNavigation(item.path)}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
+          <div className="flex items-center space-x-4">
+            {/* デスクトップナビゲーション - ログイン時のみ表示 */}
+            {user && (
+              <div className="hidden md:flex items-center space-x-1">
+                {navigationItems.map((item) => (
+                  <button 
+                    key={item.key}
+                    className={`nav-item ${currentView === item.key ? 'nav-item-active' : ''}`}
+                    onClick={() => handleNavigation(item.path)}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* 認証ボタン・ユーザーメニュー */}
+            <div className="hidden md:flex items-center space-x-2">
+              {loading ? (
+                <div className="w-8 h-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+              ) : user ? (
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                      <span className="text-primary-foreground text-sm font-medium">
+                        {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium">{user.name || user.email}</span>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-64 bg-card border rounded-lg shadow-lg z-50">
+                      <div className="py-1">
+                        <div className="px-4 py-3 border-b">
+                          <div className="text-sm font-medium text-foreground truncate">
+                            {user.name || 'ユーザー'}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate mt-1">
+                            {user.email}
+                          </div>
+                        </div>
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-muted transition-colors"
+                        >
+                          ログアウト
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  onClick={() => setAuthModalOpen(true)}
+                  variant="outline"
+                  size="sm"
+                >
+                  ログイン
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* モバイルハンバーガーメニューボタン */}
@@ -117,7 +202,8 @@ export function Navigation() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t bg-card/95 backdrop-blur">
             <div className="py-2 space-y-1">
-              {navigationItems.map((item) => (
+              {/* ナビゲーション項目 - ログイン時のみ表示 */}
+              {user && navigationItems.map((item) => (
                 <button
                   key={item.key}
                   className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-muted transition-colors ${
@@ -129,10 +215,59 @@ export function Navigation() {
                   <span>{item.label}</span>
                 </button>
               ))}
+              
+              {/* モバイル認証セクション */}
+              <div className={`${user ? 'border-t pt-2 mt-2' : 'pt-2'}`}>
+                {loading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="w-6 h-6 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                  </div>
+                ) : user ? (
+                  <div className="px-4 py-2">
+                    <div className="flex items-center space-x-3 mb-3">
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
+                        <span className="text-primary-foreground text-sm font-medium">
+                          {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">{user.name || user.email}</div>
+                        <div className="text-xs text-muted-foreground">{user.email}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left px-2 py-2 text-sm hover:bg-muted rounded transition-colors"
+                    >
+                      ログアウト
+                    </button>
+                  </div>
+                ) : (
+                  <div className="px-4 py-2">
+                    <Button
+                      onClick={() => {
+                        setAuthModalOpen(true);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
+                      ログイン
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* 認証モーダル */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+      />
     </nav>
   );
 }
