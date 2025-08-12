@@ -169,6 +169,15 @@ export function CompanyDetail({
             <Button variant="outline" onClick={onBackToCompanies}>
               企業一覧に戻る
             </Button>
+            {activeTab === "pairs" && (
+              <Button 
+                onClick={() => onCalculateProfitLoss(company.id)}
+                disabled={isLoading}
+                variant="outline"
+              >
+                {isLoading ? "更新中..." : "損益データを更新"}
+              </Button>
+            )}
           </div>
         </div>
 
@@ -283,16 +292,6 @@ export function CompanyDetail({
                     onDelete={onDeletePair}
                     onSettle={onSettlePair}
                   />
-                  {/* 損益計算ボタン */}
-                  <div className="flex justify-end mt-4">
-                    <Button 
-                      onClick={() => onCalculateProfitLoss(company.id)}
-                      disabled={isLoading}
-                      variant="outline"
-                    >
-                      {isLoading ? "更新中..." : "損益データを更新"}
-                    </Button>
-                  </div>
                 </div>
               )}
 
